@@ -10,20 +10,14 @@ header("Pragma: no-cache");
 require("functions.php");
 require("db.php");
 
-function createIfDoesntExist($f) {
-  if (!file_exists($f)) {
-    touch($f, strtotime('-1 days'));
-  }
-}
-
 $isCurl = preg_match('/curl/', $_SERVER['HTTP_USER_AGENT']);
 
 $forceDownload = $isCurl || isset($_GET['download']);
 
 if(count($_FILES) > 0) {
-  $db = new Database();
-  $db->replacePaste($_FILES);
-  die();
+	$db = new Database();
+	$db->replacePaste($_FILES);
+  	die();
 }
 
 if(isset($_GET)) {

@@ -4,22 +4,32 @@
 <head>
   <title>Clipboard.AntonChristensen.net</title>
   <link rel="stylesheet" type="text/css" href="style.css">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <? if(getenv('DEVMODE') == '1'): ?> 
   <script src="https://cdn.jsdelivr.net/npm/vue@2/dist/vue.js"></script>
-  <!-- <script src="https://cdn.jsdelivr.net/npm/vue@2"></script> -->
+  <? else: ?>
+  <script src="https://cdn.jsdelivr.net/npm/vue@2"></script>
+  <? endif; ?>
 </head>
 <body>
   <div id="app">
     <div class="progress">
       <div class="bar visible" v-bind:class="{ done: upload.highlight }" v-bind:style="{ width: upload.progress + '%' }"></div>
     </div>
+    <p>
+    To copy data to your local clipboard press <button v-on:click="copyToLocalClipboard">Ctrl+C</button><br>
+    To upload your local clipboard to the site press <button v-on:click="uploadClipboardContents">Ctrl+V</button> or drag and drop a file onto the page<br>
+    <br>
+    Below is listed the currently uploaded representations of the online clipboard
+    </p>
     <ul>
       <li v-for="item in clipboard">
-        <a v-bind:href="'/?clip='+item.label"><b>{{ item.label }}: </b><span>{{ item.size }}</span></a>
+        <a v-bind:href="'?clip='+item.label" target="_blank"><b>{{ item.label }}: </b><span>{{ humanFileSize(item.size) }}</span></a>
+        <button v-if="isPreviewable(item.label)" v-on:click="item.expanded = !item.expanded">Preview</button>
+        <iframe v-if="item.expanded" v-bind:src="'?cachekill='+item.size+'&clip='+item.label"></iframe>
       </li>
     </ul>
   </div>
-
-  <script type="text/javascript" src="https://code.jquery.com/jquery-3.4.1.slim.min.js"></script>
   <script>
   var app = new Vue({
     el: '#app',
@@ -28,7 +38,26 @@
       upload: {highlight: false, progress: 0}
     },
     methods: {
-
+      isPreviewable: function(label) {
+        return true;
+      },
+      humanFileSize: function(bytes, si=false, dp=1) {
+        // function stolen from stack overflow
+        const thresh = si ? 1000 : 1024;
+        if (Math.abs(bytes) < thresh) {
+          return bytes + ' B';
+        }
+        const units = si 
+          ? ['kB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB'] 
+          : ['KiB', 'MiB', 'GiB', 'TiB', 'PiB', 'EiB', 'ZiB', 'YiB'];
+        let u = -1;
+        const r = 10**dp;
+        do {
+          bytes /= thresh;
+          ++u;
+        } while (Math.round(Math.abs(bytes) * r) / r >= thresh && u < units.length - 1);
+        return bytes.toFixed(dp) + ' ' + units[u];
+      },
       uploadFiles: function(files) {
         self = this;
         var formData = new FormData();
@@ -42,11 +71,9 @@
         xhr.upload.addEventListener('progress', function(evt) {
           // on progress
           self.upload.progress = (evt.loaded / evt.total) * 100;
-          console.log(self.upload.progress);
         }, false);
         xhr.upload.addEventListener('load', function(evt) {
           // onFileUploadDone
-          console.log("load");
           self.upload.highlight = true;
           setTimeout(() => {
             self.upload.highlight = false;
@@ -57,25 +84,24 @@
         }, false);
         xhr.upload.addEventListener('loadstart', function(evt) {
           // onFileUploadStarted
-          console.log("loadstart");
           self.upload.progress = 0;
           self.upload.highlight = false;
         }, false);
-        xhr.addEventListener('readystatechange', function(evt) {
+        xhr.addEventListener('error', function(evt) {
           // onFileUploadServerResponse
-          // console.log("readystatechange");
-
+          console.log("Error");
+          console.log(evt);
         }, false);
         
         
-        xhr.open("POST", "/", true);
+        xhr.open("POST", "?", true);
 
         // Set appropriate headers
         started_at = new Date();
         xhr.send(formData);
       },
       uploadClipboardContents: async function() {
-        console.log("Copying from clipboard. this may take a while");
+        console.log("Copying from local clipboard. this may take a while");
         this.upload.progress = 100;
         this.upload.highlight = true;
         newClipboard = [];
@@ -84,16 +110,13 @@
         for (const clipboardItem of clipboardItems) {
           for (const type of clipboardItem.types) {
             let blob = await clipboardItem.getType(type);
-            blob = blob ? blob : new Blob([])
-            console.log(blob.type);
-
-            newClipboard.push({label: type, size: blob.size, blob: blob})
+            if(blob)
+              newClipboard.push(new File([blob], "LABEL_"+encodeURIComponent(type)));
           }
         }
 
-        console.log(newClipboard);
-        this.clipboard = newClipboard;
-        this.uploadFiles(newClipboard.map(item => new File([item.blob], "LABEL_"+encodeURIComponent(item.label))))
+        // this.clipboard = newClipboard;
+        this.uploadFiles(newClipboard)
       },
       getBlob: async function(label) {
         return new Promise(function (resolve, reject) {
@@ -105,7 +128,7 @@
                 resolve(new Blob([xhttp.response], {type: label}));
               }
           };
-          xhttp.open("GET", "/?clip="+label, true);
+          xhttp.open("GET", "?clip="+label, true);
           xhttp.send();
         });
       },
@@ -115,16 +138,16 @@
         for (let i = 0; i < this.clipboard.length; i++) {
           let label = this.clipboard[i].label;
           let blob = await this.getBlob(label);
-          console.log(blob)
+          if(blob.size == 0) blob = new Blob();
           data[label] = blob;
         }
 
         navigator.clipboard.write([new ClipboardItem(data)]).then(function(e) {
           /* success */
-          console.log(e)
+          console.log(e);
           console.log("WRITE SUCCESS");
         }, function(e) {
-          console.log(e)
+          console.log(e);
           console.log("WRITE FAIL");
           /* failure */
         });
@@ -139,17 +162,12 @@
             cmdKey = 91,
             vKey = 86,
             cKey = 67;
-
-        $(document).keydown(function(e) {
-            if (e.keyCode == ctrlKey || e.keyCode == cmdKey) ctrlDown = true;
-        }).keyup(function(e) {
+        
+        document.addEventListener("keyup", function(e) {
             if (e.keyCode == ctrlKey || e.keyCode == cmdKey) ctrlDown = false;
         });
-        // Document Ctrl + C/V 
-        $(document).keydown(function(e) {
-            if(e.target == $('textarea')[0])
-              return true;
-            
+        document.addEventListener("keydown", function(e) {
+            if (e.keyCode == ctrlKey || e.keyCode == cmdKey) ctrlDown = true;
             if (ctrlDown && (e.keyCode == cKey)) self.copyToLocalClipboard(); // console.log("Document catch Ctrl+C");
             if (ctrlDown && (e.keyCode == vKey)) self.uploadClipboardContents(); //console.log("Document catch Ctrl+V")// uploadClipboardContents();
         });
@@ -164,37 +182,56 @@
                 callback(xhttp.responseText);
               }
           };
-          xhttp.open("GET", "/?info", true);
+          xhttp.open("GET", "?info", true);
           xhttp.send();
         }
-        var currentHash = "";
-        var currentSize = 0;
         var currentEditedTime = 0;
-        setInterval(() => {
+        readRemote = function() {
           getInfo((info) => {
             var info = JSON.parse(info);
             if(currentEditedTime != info.time) {
-              // location.reload()
               let l = [];
               for (let i = 0; i < info.labels.length; i++) {
+                info.labels[i].expanded = false;
                 l.push(info.labels[i]);
               }
               self.clipboard = l;
-            }
-            else {
-              currentHash = info.hash;
-              currentSize = info.size;
               currentEditedTime = info.time;
             }
           });
-        }, 1000);
-      }      
+        }
+        setInterval(readRemote, 1000);
+        readRemote();
+      }
+      
+      function handleDropFiles() {
+        let prevDef = function(evt) {
+          evt.preventDefault();
+          evt.stopPropagation();
+        };
+        window.addEventListener("dragenter", prevDef, false);
+        window.addEventListener("dragover", prevDef, false);
+        window.addEventListener("dragleave", prevDef, false);
 
+        window.addEventListener("drop", function (evt) {
+          prevDef(evt);
+          console.log(evt.dataTransfer.files);
+          let fs = []
+          for (let i = 0; i < evt.dataTransfer.files.length; i++) {
+            const f = evt.dataTransfer.files[i];
+            fs.push(new File([f], "DROP_"+i))
+          }
+          self.uploadFiles(fs);
+        },false);
+      }
+
+      handleDropFiles();
       handleKeyboardShortcuts();
       watchForChanges();
 
     }
   })
 </script>
+
 </body>
 </html>

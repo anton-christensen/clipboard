@@ -12,6 +12,18 @@ if (!function_exists('getallheaders')) {
     }
 }
 
+function createIfDoesntExist($f) {
+  if (!file_exists($f)) {
+    touch($f, strtotime('-1 days'));
+  }
+}
+
+function startsWith ($string, $startString) { 
+    $len = strlen($startString); 
+    return (substr($string, 0, $len) === $startString); 
+} 
+  
+
 function human_filesize($bytes, $decimals = 2) {
     $size = array('B','kB','MB','GB','TB','PB','EB','ZB','YB');
     $factor = floor((strlen($bytes) - 1) / 3);
