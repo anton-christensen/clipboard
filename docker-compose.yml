@@ -1,0 +1,13 @@
+version: "3.4"
+services:
+  app:
+    build: 
+      context: .
+      target: devenv
+    ports:
+      - "${WEB_CLIP_PORT:-8000}:443"
+    volumes:
+       - ./src:/srv/app/
+
+  php-fpm:
+    image: "php:7.4-fpm"

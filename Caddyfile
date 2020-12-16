@@ -1,0 +1,13 @@
+localhost
+root * /srv/app/
+encode gzip
+php_fastcgi php-fpm:9000
+rewrite * /index.php?{query}&p={path}
+
+log {
+    output stdout
+    format single_field common_log
+}
+tls internal
+
+# on startup php-fpm --nodaemonize
