@@ -35,7 +35,7 @@ class Database {
             print("NO CONNECTION");
         else
             print("SUCCESSFULLY CONNECTED");
-        $this->staticQuery("CREATE TABLE metadata ( id INTEGER PRIMARY KEY AUTOINCREMENT, document VARCHAR(256), uploadTime TEXT );");
+        $this->staticQuery("CREATE TABLE metadata ( id INTEGER PRIMARY KEY AUTOINCREMENT, document VARCHAR(256), uploadTime INT );");
         $this->staticQuery("CREATE TABLE items ( id INTEGER PRIMARY KEY AUTOINCREMENT, document VARCHAR(256), label VARCHAR(100), mime VARCHAR(32), data BLOB, size INT );");
     }
 
@@ -44,16 +44,25 @@ class Database {
         $this->staticQuery("DELETE FROM metadata WHERE document = :p;",true);
         $this->staticQuery("INSERT INTO metadata(document, uploadTime) VALUES(:p, ".time().")",true);
         
-        // DELETE old documents to save space
-        $sql = "DELETE FROM items
-                WHERE id in (
-                    SELECT i.id FROM items i
+        // // DELETE old documents to save space
+        // $sql = "DELETE FROM items
+        //         WHERE id in (
+        //             SELECT i.id FROM items i
+        //             JOIN metadata m
+        //             ON m.document = i.document
+        //             WHERE m.uploadtime < :t
+        //         )";
+        // $stmt = $this->pdo->prepare($sql);
+        // $stmt->bindValue(':t', time() + 60*60*24);
+        // $stmt->execute();
+
+                // DELETE old documents to save space
+                $sql = "SELECT i.id, i.label FROM items i
                     JOIN metadata m
                     ON m.document = i.document
-                    WHERE m.uploadtime < :time
-                )";
+                    WHERE m.uploadTime < :t";
         $stmt = $this->pdo->prepare($sql);
-        $stmt->bindValue(':time', time() + 60*60*24);
+        $stmt->bindValue(':t', time() + 60*60*24);
         $stmt->execute();
     }
 
