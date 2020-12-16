@@ -2,7 +2,12 @@
 
 
 $db = new Database();
-$entry = $db->getEntry($_GET['clip']);
+if(empty($_GET['clip'])) {
+  $entry = $db->getGenericEntry();
+}
+else {
+  $entry = $db->getEntry($_GET['clip']);
+}
 if($entry === null) {
   http_response_code(500);
   print("No such label");
@@ -16,6 +21,7 @@ else
 
 header("Content-Type: ".$entry["mime"]);
 header("Content-Length:".$entry["size"]);
+
 print($entry["blob"]);
 // var_dump($entry);
 

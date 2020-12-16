@@ -123,5 +123,28 @@ class Database {
         }
     }
 
+    public function getGenericEntry() {
+        $stmt = $this->pdo->prepare("SELECT	label, mime, data, size FROM items ORDER BY size DESC LIMIT 1");
+
+        if($stmt == false) {
+            var_dump($this->pdo->errorCode());
+            var_dump($this->pdo->errorInfo());
+        }
+        if ($stmt->execute()) {
+            $label = null;
+            $mime = null;
+            $blob = null;
+            $size = null;
+            $stmt->bindColumn(1, $label);
+            $stmt->bindColumn(2, $mime);
+            $stmt->bindColumn(3, $blob, \PDO::PARAM_LOB);
+            $stmt->bindColumn(4, $size);
+
+            return $stmt->fetch(\PDO::FETCH_BOUND) ? ["label" => $label, "mime" => $mime, "blob" => $blob, "size" => $size] : null;
+        } else {
+            return null;
+        }
+    }
+
 }
 ?>
