@@ -17,6 +17,7 @@ class Database {
             }
             else {
                 $this->pdo = new \PDO("sqlite:/var/www/data/db.sqlite");
+                $this->removeOldDocuments();
             }
         }
         return $this->pdo;
@@ -39,31 +40,24 @@ class Database {
         $this->staticQuery("CREATE TABLE items ( id INTEGER PRIMARY KEY AUTOINCREMENT, document VARCHAR(256), label VARCHAR(100), mime VARCHAR(32), data BLOB, size INT );");
     }
 
-    public function emptyTable() {
-        $this->staticQuery("DELETE FROM items WHERE document = :p;",true);
-        $this->staticQuery("DELETE FROM metadata WHERE document = :p;",true);
-        $this->staticQuery("INSERT INTO metadata(document, uploadTime) VALUES(:p, ".time().")",true);
-        
-        // // DELETE old documents to save space
-        // $sql = "DELETE FROM items
-        //         WHERE id in (
-        //             SELECT i.id FROM items i
-        //             JOIN metadata m
-        //             ON m.document = i.document
-        //             WHERE m.uploadtime < :t
-        //         )";
-        // $stmt = $this->pdo->prepare($sql);
-        // $stmt->bindValue(':t', time() + 60*60*24);
-        // $stmt->execute();
-
-                // DELETE old documents to save space
-                $sql = "SELECT i.id, i.label FROM items i
-                    JOIN metadata m
-                    ON m.document = i.document
-                    WHERE m.uploadTime < :t";
+    public function removeOldDocuments() {
+        // Delete documents
+        $sql = "DELETE FROM items
+        WHERE id IN (
+            SELECT i.id FROM items i
+            JOIN metadata m
+            ON m.document = i.document
+            WHERE m.uploadTime < :t
+        )";
         $stmt = $this->pdo->prepare($sql);
-        $stmt->bindValue(':t', time() + 60*60*24);
-        $stmt->execute();
+        $stmt->bindValue(':t', time() - 60*60*24);
+        $value = $stmt->execute();
+
+        // Delete metadata file
+        $sql = "DELETE FROM metadata WHERE uploadTime < :t";
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->bindValue(':t', time() - 60*60*24); // *60*24
+        $value = $stmt->execute();
     }
 
     public function insertDocument($label, $mime, $path, $size) {
@@ -87,7 +81,9 @@ class Database {
     }
 
     public function replacePaste($files) {
-        $this->emptyTable();
+        $this->staticQuery("DELETE FROM items WHERE document = :p;",true);
+        $this->staticQuery("DELETE FROM metadata WHERE document = :p;",true);
+        $this->staticQuery("INSERT INTO metadata(document, uploadTime) VALUES(:p, ".time().")",true);
 
         $files = array_values($files);
         for ($i=0; $i < count($files); $i++) { 
