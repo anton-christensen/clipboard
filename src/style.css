@@ -3,6 +3,7 @@ body, html {
   height: 100%;
   margin: 0;
   padding: 0;
+  line-height: 1.5;
 }
 
 body {
@@ -58,4 +59,50 @@ iframe {
   margin: 1rem 0;
   resize: vertical;
   overflow-y: auto;
+}
+
+
+
+code,
+pre {
+  font-size: 1em;
+  font-family: Consolas,Liberation Mono,monospace;
+}
+
+code {
+}
+
+pre {
+  margin-top: 0;
+  margin-bottom: 0;
+  word-wrap: normal;
+  line-height: 1.1;
+}
+
+code {
+  padding: .2em .4em;
+  margin: 0;
+  font-size: 85%;
+  background-color: rgba(175,184,193,0.2);
+  border-radius: 6px;
+}
+pre>code {
+  padding: 0;
+  margin: 0;
+  word-break: normal;
+  white-space: pre;
+  background: transparent;
+  border: 0;
+}
+
+pre code {
+  display: inline;
+  max-width: auto;
+  padding: 0;
+  margin: 0;
+  overflow: visible;
+  line-height: inherit;
+  word-wrap: normal;
+  background-color: transparent;
+  border: 0;
 }
