@@ -13,14 +13,19 @@
 </head>
 <body>
   <div id="app">
+    <input type="file" multiple ref="files" @change="uploadFilesFromSelection" style="display: none">
     <div class="progress">
       <div class="bar visible" v-bind:class="{ done: upload.highlight }" v-bind:style="{ width: upload.progress + '%' }"></div>
     </div>
-    <p>
-    To copy data to your local clipboard press <button v-on:click="copyToLocalClipboard">Ctrl+C</button><br>
-    To upload your local clipboard to the site press <button v-on:click="uploadClipboardContents">Ctrl+V</button> or drag and drop a file onto the page<br>
-    <br>
-    Below is listed the currently uploaded representations of the online clipboard
+    <ul>
+      <li><button @click="copyToLocalClipboard">Ctrl+C</button>: To copy data to your local clipboard</li>
+      <li><button @click="uploadClipboardContents">Ctrl+V</button>: To upload your local clipboard to the site</li>
+      <li><button @click="$refs.files.click()">Upload</button>: files by dragging them onto the page</li>
+      <li><a href="?install">Instructions</a>: for getting OS integrations like <code>Ctrl+Win+C/V</code> to copy and paste to/from clipboard from anywhere directly</li>
+    </ul>
+
+      <br>
+      Below is listed the currently uploaded representations of the online clipboard
     </p>
     <ul>
       <li v-for="item in clipboard">
@@ -99,6 +104,10 @@
         // Set appropriate headers
         started_at = new Date();
         xhr.send(formData);
+      },
+      uploadFilesFromSelection: function(evt) {
+        console.log(evt.target.files)
+        this.uploadFiles(evt.target.files);
       },
       uploadClipboardContents: async function() {
         console.log("Copying from local clipboard. this may take a while");
@@ -216,13 +225,7 @@
 
         window.addEventListener("drop", function (evt) {
           prevDef(evt);
-          console.log(evt.dataTransfer.files);
-          let fs = []
-          for (let i = 0; i < evt.dataTransfer.files.length; i++) {
-            const f = evt.dataTransfer.files[i];
-            fs.push(new File([f], "DROP_"+i))
-          }
-          self.uploadFiles(fs);
+          self.uploadFiles(evt.dataTransfer.files);
         },false);
       }
 

@@ -106,7 +106,7 @@ class Database {
             }
             else {
                 $mime = mime_content_type($files[$i]['tmp_name']);
-                $name = $mime;
+                $name = isset($files[$i]['name']) ? $files[$i]['name'] : $mime;
             }
             $this->insertDocument($name, $mime, $files[$i]['tmp_name'], $files[$i]['size']);
         }
