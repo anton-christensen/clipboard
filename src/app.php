@@ -168,8 +168,9 @@
         });
         document.addEventListener("keydown", function(e) {
             if (e.keyCode == ctrlKey || e.keyCode == cmdKey) ctrlDown = true;
-            if (ctrlDown && (e.keyCode == cKey)) self.copyToLocalClipboard(); // console.log("Document catch Ctrl+C");
-            if (ctrlDown && (e.keyCode == vKey)) self.uploadClipboardContents(); //console.log("Document catch Ctrl+V")// uploadClipboardContents();
+            
+            if (ctrlDown && (e.keyCode == cKey) && window.getSelection().isCollapsed) self.copyToLocalClipboard();
+            if (ctrlDown && (e.keyCode == vKey)) self.uploadClipboardContents();
         });
       }
 
