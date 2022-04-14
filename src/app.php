@@ -26,7 +26,7 @@
       <li v-for="item in clipboard">
         <a v-bind:href="'?clip='+item.label" target="_blank"><b>{{ item.label }}: </b><span>{{ humanFileSize(item.size) }}</span></a>
         <button v-if="isPreviewable(item.label)" v-on:click="item.expanded = !item.expanded">Preview</button>
-        <iframe v-if="item.expanded" v-bind:src="'?cachekill='+item.size+'&clip='+item.label"></iframe>
+        <iframe v-if="item.expanded" v-bind:src="'?cachekill='+item.hash+'&clip='+item.label"></iframe>
       </li>
     </ul>
   </div>

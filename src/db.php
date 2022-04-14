@@ -37,7 +37,17 @@ class Database {
         else
             print("SUCCESSFULLY CONNECTED");
         $this->staticQuery("CREATE TABLE metadata ( id INTEGER PRIMARY KEY AUTOINCREMENT, document VARCHAR(256), uploadTime INT );");
-        $this->staticQuery("CREATE TABLE items ( id INTEGER PRIMARY KEY AUTOINCREMENT, document VARCHAR(256), label VARCHAR(100), mime VARCHAR(32), data BLOB, size INT );");
+        $this->staticQuery(
+            "CREATE TABLE 
+                items ( 
+                    id INTEGER PRIMARY KEY AUTOINCREMENT, 
+                    document VARCHAR(256), 
+                    label VARCHAR(100), 
+                    mime VARCHAR(32),
+                    hash VARCHAR(256),
+                    data BLOB, 
+                    size INT
+                );");
     }
 
     public function removeOldDocuments() {
@@ -61,16 +71,18 @@ class Database {
     }
 
     public function insertDocument($label, $mime, $path, $size) {
-        $sql = "INSERT INTO items(document,label,mime,data,size) "
-                . "VALUES(:p,:label,:mime,:blob,:size)";
+        $sql = "INSERT INTO items(document,label,mime,hash,data,size) "
+                . "VALUES(:p,:label,:mime,:hash,:blob,:size)";
 
-        $fh = fopen($path, "r+");
         $stmt = $this->pdo->prepare($sql);
         $this->printErrors($stmt);
+        $hash = hash_file('sha256', $path);
+        $fh = fopen($path, "r+");
 
         $stmt->bindParam(':p', $this->pageName);
         $stmt->bindParam(':label', $label);
         $stmt->bindParam(':mime', $mime);
+        $stmt->bindParam(':hash', $hash);
         $stmt->bindParam(':blob', $fh, \PDO::PARAM_LOB);
         $stmt->bindParam(':size', $size);
         $stmt->execute();
@@ -101,17 +113,19 @@ class Database {
     }
 
     public function getLabels() {
-        $stmt = $this->pdo->prepare("SELECT	label, size FROM items WHERE document = :p");
+        $stmt = $this->pdo->prepare("SELECT	label, size, hash FROM items WHERE document = :p");
         $this->printErrors($stmt);
         $stmt->bindParam(':p', $this->pageName);
         if ($stmt->execute()) {
             $label = null;
             $size = null;
+            $hash = null;
             $stmt->bindColumn(1, $label);
             $stmt->bindColumn(2, $size);
+            $stmt->bindColumn(3, $hash);
             $l = [];
             while($stmt->fetch(\PDO::FETCH_BOUND)) {
-                $l[] = ["label" => $label, "size" => $size]; 
+                $l[] = ["label" => $label, "size" => $size, "hash" => $hash]; 
             }
             return $l;
         } else {
@@ -135,26 +149,28 @@ class Database {
     }    
 
     public function getEntry($label) {
-        $stmt = $this->pdo->prepare("SELECT	label, mime, data, size FROM items WHERE label = :label AND document = :p");
+        $stmt = $this->pdo->prepare("SELECT	label, mime, data, size, hash FROM items WHERE label = :label AND document = :p");
         $this->printErrors($stmt);
         if ($stmt->execute([":label" => $label, ":p" => $this->pageName])) {
             $label = null;
             $mime = null;
             $blob = null;
             $size = null;
+            $hash = null;
             $stmt->bindColumn(1, $label);
             $stmt->bindColumn(2, $mime);
             $stmt->bindColumn(3, $blob, \PDO::PARAM_LOB);
             $stmt->bindColumn(4, $size);
+            $stmt->bindColumn(5, $hash);
 
-            return $stmt->fetch(\PDO::FETCH_BOUND) ? ["label" => $label, "mime" => $mime, "blob" => $blob, "size" => $size] : null;
+            return $stmt->fetch(\PDO::FETCH_BOUND) ? ["label" => $label, "mime" => $mime, "hash" => $hash, "blob" => $blob, "size" => $size] : null;
         } else {
             return null;
         }
     }
 
     public function getGenericEntry() {
-        $stmt = $this->pdo->prepare("SELECT	label, mime, data, size FROM items WHERE document = :p ORDER BY size DESC LIMIT 1");
+        $stmt = $this->pdo->prepare("SELECT	label, mime, data, size, hash FROM items WHERE document = :p ORDER BY size DESC LIMIT 1");
         $this->printErrors($stmt);
         $stmt->bindParam(':p', $this->pageName);
         if ($stmt->execute()) {
@@ -162,12 +178,14 @@ class Database {
             $mime = null;
             $blob = null;
             $size = null;
+            $hash = null;
             $stmt->bindColumn(1, $label);
             $stmt->bindColumn(2, $mime);
             $stmt->bindColumn(3, $blob, \PDO::PARAM_LOB);
             $stmt->bindColumn(4, $size);
+            $stmt->bindColumn(5, $hash);
 
-            return $stmt->fetch(\PDO::FETCH_BOUND) ? ["label" => $label, "mime" => $mime, "blob" => $blob, "size" => $size] : null;
+            return $stmt->fetch(\PDO::FETCH_BOUND) ? ["label" => $label, "mime" => $mime, "hash" => $hash, "blob" => $blob, "size" => $size] : null;
         } else {
             return null;
         }
