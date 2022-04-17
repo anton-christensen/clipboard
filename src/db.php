@@ -32,11 +32,15 @@ class Database {
     }
 
     private function provision() {
-        if($this->pdo == null)
+        if($this->pdo == null) {
             print("NO CONNECTION");
-        else
-            print("SUCCESSFULLY CONNECTED");
-        $this->staticQuery("CREATE TABLE metadata ( id INTEGER PRIMARY KEY AUTOINCREMENT, document VARCHAR(256), uploadTime INT );");
+            return;
+        }
+        
+        if (!file_exists('../data')) {
+            mkdir('../data', 0777, true);
+        }        
+        
         $this->staticQuery(
             "CREATE TABLE 
                 items ( 
@@ -45,57 +49,67 @@ class Database {
                     label VARCHAR(100), 
                     mime VARCHAR(32),
                     hash VARCHAR(256),
-                    data BLOB, 
-                    size INT
+                    size INT,
+                    uploadTime INT
                 );");
     }
 
     public function removeOldDocuments() {
+        $stmt = $this->pdo->prepare("SELECT	id FROM items WHERE uploadTime < :t");
+        $this->printErrors($stmt);
+        $yesterday = time() - 60*60*24;
+        $stmt->bindParam(':t', $yesterday);
+        if ($stmt->execute()) {
+            $id = null;
+            $stmt->bindColumn(1, $id);
+            while($stmt->fetch(\PDO::FETCH_BOUND)) {
+                unlink('../data/'.$id);
+            }
+        }
+
         // Delete documents
-        $sql = "DELETE FROM items
-        WHERE id IN (
-            SELECT i.id FROM items i
-            JOIN metadata m
-            ON m.document = i.document
-            WHERE m.uploadTime < :t
-        )";
+        $sql = "DELETE FROM items WHERE uploadTime < :t";
         $stmt = $this->pdo->prepare($sql);
         $stmt->bindValue(':t', time() - 60*60*24);
-        $value = $stmt->execute();
-
-        // Delete metadata file
-        $sql = "DELETE FROM metadata WHERE uploadTime < :t";
-        $stmt = $this->pdo->prepare($sql);
-        $stmt->bindValue(':t', time() - 60*60*24); // *60*24
         $value = $stmt->execute();
     }
 
     public function insertDocument($label, $mime, $path, $size) {
-        $sql = "INSERT INTO items(document,label,mime,hash,data,size) "
-                . "VALUES(:p,:label,:mime,:hash,:blob,:size)";
+        $sql = "INSERT INTO items(document,label,mime,hash,size,uploadTime) "
+                . "VALUES(:p,:label,:mime,:hash,:size,:t)";
 
         $stmt = $this->pdo->prepare($sql);
         $this->printErrors($stmt);
-        $hash = hash_file('sha256', $path);
-        $fh = fopen($path, "r+");
+        $hash = hash_file('md5', $path);
 
         $stmt->bindParam(':p', $this->pageName);
         $stmt->bindParam(':label', $label);
         $stmt->bindParam(':mime', $mime);
         $stmt->bindParam(':hash', $hash);
-        $stmt->bindParam(':blob', $fh, \PDO::PARAM_LOB);
         $stmt->bindParam(':size', $size);
+        $stmt->bindValue(':t', time());
         $stmt->execute();
 
-        // unlink($path);
+        $id = $this->pdo->lastInsertId();
+        move_uploaded_file($path, '../data/'.$id);
 
         return $this->pdo->lastInsertId();
     }
 
     public function replacePaste($files) {
+
+        $stmt = $this->pdo->prepare("SELECT	id FROM items WHERE document = :p");
+        $this->printErrors($stmt);
+        $stmt->bindParam(':p', $this->pageName);
+        if ($stmt->execute()) {
+            $id = null;
+            $stmt->bindColumn(1, $id);
+            while($stmt->fetch(\PDO::FETCH_BOUND)) {
+                unlink('../data/'.$id);
+            }
+        }
         $this->staticQuery("DELETE FROM items WHERE document = :p;",true);
-        $this->staticQuery("DELETE FROM metadata WHERE document = :p;",true);
-        $this->staticQuery("INSERT INTO metadata(document, uploadTime) VALUES(:p, ".time().")",true);
+
 
         $files = array_values($files);
         for ($i=0; $i < count($files); $i++) { 
@@ -113,19 +127,21 @@ class Database {
     }
 
     public function getLabels() {
-        $stmt = $this->pdo->prepare("SELECT	label, size, hash FROM items WHERE document = :p");
+        $stmt = $this->pdo->prepare("SELECT	label, size, hash, uploadTime FROM items WHERE document = :p");
         $this->printErrors($stmt);
         $stmt->bindParam(':p', $this->pageName);
         if ($stmt->execute()) {
             $label = null;
             $size = null;
             $hash = null;
+            $time = null;
             $stmt->bindColumn(1, $label);
             $stmt->bindColumn(2, $size);
             $stmt->bindColumn(3, $hash);
+            $stmt->bindColumn(4, $time);
             $l = [];
             while($stmt->fetch(\PDO::FETCH_BOUND)) {
-                $l[] = ["label" => $label, "size" => $size, "hash" => $hash]; 
+                $l[] = ["label" => $label, "size" => $size, "hash" => $hash, "time" => $time]; 
             }
             return $l;
         } else {
@@ -133,59 +149,44 @@ class Database {
         }
     }
     
-    public function getMetadata() {
-        $stmt = $this->pdo->prepare("SELECT	uploadTime FROM metadata WHERE document = :p");
-        $this->printErrors($stmt);
-        $stmt->bindParam(':p', $this->pageName);
-
-        if ($stmt->execute()) {
-            $time = null;
-            $stmt->bindColumn(1, $time);
-
-            return $stmt->fetch(\PDO::FETCH_BOUND) ? ["time" => $time, "labels" => $this->getLabels()] : null;
-        } else {
-            return null;
-        }
-    }    
-
     public function getEntry($label) {
-        $stmt = $this->pdo->prepare("SELECT	label, mime, data, size, hash FROM items WHERE label = :label AND document = :p");
+        $stmt = $this->pdo->prepare("SELECT	id, label, mime, size, hash FROM items WHERE label = :label AND document = :p");
         $this->printErrors($stmt);
         if ($stmt->execute([":label" => $label, ":p" => $this->pageName])) {
+            $id = null;
             $label = null;
             $mime = null;
-            $blob = null;
             $size = null;
             $hash = null;
-            $stmt->bindColumn(1, $label);
-            $stmt->bindColumn(2, $mime);
-            $stmt->bindColumn(3, $blob, \PDO::PARAM_LOB);
+            $stmt->bindColumn(1, $id);
+            $stmt->bindColumn(2, $label);
+            $stmt->bindColumn(3, $mime);
             $stmt->bindColumn(4, $size);
             $stmt->bindColumn(5, $hash);
 
-            return $stmt->fetch(\PDO::FETCH_BOUND) ? ["label" => $label, "mime" => $mime, "hash" => $hash, "blob" => $blob, "size" => $size] : null;
+            return $stmt->fetch(\PDO::FETCH_BOUND) ? ["id" => $id, "label" => $label, "mime" => $mime, "hash" => $hash, "size" => $size] : null;
         } else {
             return null;
         }
     }
 
     public function getGenericEntry() {
-        $stmt = $this->pdo->prepare("SELECT	label, mime, data, size, hash FROM items WHERE document = :p ORDER BY size DESC LIMIT 1");
+        $stmt = $this->pdo->prepare("SELECT	id, label, mime, size, hash FROM items WHERE document = :p ORDER BY size DESC LIMIT 1");
         $this->printErrors($stmt);
         $stmt->bindParam(':p', $this->pageName);
         if ($stmt->execute()) {
+            $id = null;
             $label = null;
             $mime = null;
-            $blob = null;
             $size = null;
             $hash = null;
-            $stmt->bindColumn(1, $label);
-            $stmt->bindColumn(2, $mime);
-            $stmt->bindColumn(3, $blob, \PDO::PARAM_LOB);
+            $stmt->bindColumn(1, $id);
+            $stmt->bindColumn(2, $label);
+            $stmt->bindColumn(3, $mime);
             $stmt->bindColumn(4, $size);
             $stmt->bindColumn(5, $hash);
 
-            return $stmt->fetch(\PDO::FETCH_BOUND) ? ["label" => $label, "mime" => $mime, "hash" => $hash, "blob" => $blob, "size" => $size] : null;
+            return $stmt->fetch(\PDO::FETCH_BOUND) ? ["id" => $id, "label" => $label, "mime" => $mime, "hash" => $hash, "size" => $size] : null;
         } else {
             return null;
         }

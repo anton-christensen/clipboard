@@ -199,15 +199,10 @@
         readRemote = function() {
           getInfo((info) => {
             var info = JSON.parse(info);
-            if(currentEditedTime != info.time) {
-              let l = [];
-              for (let i = 0; i < info.labels.length; i++) {
-                info.labels[i].expanded = false;
-                l.push(info.labels[i]);
-              }
-              self.clipboard = l;
-              currentEditedTime = info.time;
-            }
+            newEditTime = info.length == 0 ? 0 : info[0].time;
+            if(currentEditedTime != newEditTime)
+              self.clipboard = info.map(x => {return { ...x, expanded: false}});
+            currentEditedTime = newEditTime;
           });
         }
         setInterval(readRemote, 1000);

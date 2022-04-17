@@ -15,14 +15,13 @@ if($entry === null) {
 }
 
 if($forceDownload)
-  header('Content-Disposition: attachment; filename="clipboard"');
+  header('Content-Disposition: attachment; filename="'.$entry["label"].'"');
 else
   header('Content-Disposition: inline');
 
 header("Content-Type: ".$entry["mime"]);
 header("Content-Length:".$entry["size"]);
 
-print($entry["blob"]);
-// var_dump($entry);
+readfile_chunked('../data/'.$entry["id"]);
 
 ?>
