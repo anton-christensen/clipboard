@@ -1,4 +1,10 @@
 version: "3.4"
+
+x-env: &common-envs
+  POSTGRES_DB: clipboard
+  POSTGRES_USER: user
+  POSTGRES_PASSWORD: password
+
 services:
   app:
     build: 
@@ -8,4 +14,11 @@ services:
       - "${WEB_CLIP_PORT:-8000}:443"
     volumes:
        - ./src:/srv/app/
+    environment: *common-envs
+    
+    
+  database:
+    image: postgres
+    restart: always
+    environment: *common-envs
 
