@@ -14,32 +14,32 @@ $isCurl = preg_match('/curl/', $_SERVER['HTTP_USER_AGENT']);
 
 $forceDownload = $isCurl || isset($_GET['download']);
 
+$db = new Database();
 if(count($_FILES) > 0) {
-	$db = new Database();
-	$db->replacePaste($_FILES);
-  	die();
+    $db->replacePaste($_FILES);
+      die();
 }
 
 if(isset($_GET)) {
-	if(isset($_GET['path'])) {
-		die();
-	}
-	else if(isset($_GET['clip'])) {
-		require("clip.php");
-		die();
-	}
-	else if(isset($_GET['install'])) {
-		require("install.php");
-		die();
-	}
-	else if(isset($_GET['test'])) {
-		include("test.php");
-		die();
-	}
-	else if(isset($_GET['info'])) {
-    include("info.php");
-    die();
-  }
+    if(isset($_GET['path'])) {
+        die();
+    }
+    else if(isset($_GET['clip'])) {
+        require("clip.php");
+        die();
+    }
+    else if(isset($_GET['install'])) {
+        require("install.php");
+        die();
+    }
+    else if(isset($_GET['test'])) {
+        include("test.php");
+        die();
+    }
+    else if(isset($_GET['info'])) {
+        include("info.php");
+        die();
+    }
 }
 
 // if curl -> return clipboard only

@@ -69,9 +69,6 @@ pre {
   font-family: Consolas,Liberation Mono,monospace;
 }
 
-code {
-}
-
 pre {
   margin-top: 0;
   margin-bottom: 0;
@@ -84,7 +81,7 @@ code {
   margin: 0;
   font-size: 85%;
   background-color: rgba(175,184,193,0.2);
-  border-radius: 6px;
+  border-radius: 0.5em;
 }
 pre>code {
   padding: 0;
