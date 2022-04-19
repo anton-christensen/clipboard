@@ -127,21 +127,23 @@ class Database {
     }
 
     public function getLabels() {
-        $stmt = $this->pdo->prepare("SELECT	label, size, hash, uploadTime FROM items WHERE document = :p");
+        $stmt = $this->pdo->prepare("SELECT	label, mime, size, hash, uploadTime FROM items WHERE document = :p");
         $this->printErrors($stmt);
         $stmt->bindParam(':p', $this->pageName);
         if ($stmt->execute()) {
             $label = null;
+            $mime = null;
             $size = null;
             $hash = null;
             $time = null;
             $stmt->bindColumn(1, $label);
-            $stmt->bindColumn(2, $size);
-            $stmt->bindColumn(3, $hash);
-            $stmt->bindColumn(4, $time);
+            $stmt->bindColumn(2, $mime);
+            $stmt->bindColumn(3, $size);
+            $stmt->bindColumn(4, $hash);
+            $stmt->bindColumn(5, $time);
             $l = [];
             while($stmt->fetch(\PDO::FETCH_BOUND)) {
-                $l[] = ["label" => $label, "size" => $size, "hash" => $hash, "time" => $time]; 
+                $l[] = ["label" => $label, "mime" => $mime, "size" => $size, "hash" => $hash, "time" => $time]; 
             }
             return $l;
         } else {
