@@ -1,6 +1,5 @@
-dist/
-dist-newstyle/
+.github/
 .git/
-.*
+dev/
 .dockerignore
 Dockerfile

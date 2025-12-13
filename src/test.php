@@ -1,4 +1,4 @@
-<? 
+<?php
 // print("Request ");
 // print_r($_REQUEST);
 
@@ -24,6 +24,6 @@ print_r(get_loaded_extensions());
 print("User ");
 print_r(getcwd());
 
-// phpinfo();
+print("User ");
+phpinfo();
 print_r(SQLite3::version());
-?>
