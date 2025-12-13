@@ -10,43 +10,37 @@ header("Pragma: no-cache");
 require("functions.php");
 require("db.php");
 
-$isCurl = preg_match('/curl/', $_SERVER['HTTP_USER_AGENT']);
-
-$forceDownload = $isCurl || isset($_GET['download']);
+$isCurl = str_contains($_SERVER['HTTP_USER_AGENT'], 'curl');
 
 $db = new Database();
-if(count($_FILES) > 0) {
+if (count($_FILES) > 0) {
     $db->replacePaste($_FILES);
-      die();
+    die();
 }
 
-if(isset($_GET)) {
-    if(isset($_GET['path'])) {
+if (isset($_GET)) {
+    if (isset($_GET['path'])) {
         die();
-    }
-    else if(isset($_GET['clip'])) {
+    } else if (isset($_GET['clip'])) {
         require("clip.php");
         die();
-    }
-    else if(isset($_GET['install'])) {
-        require("install.php");
+    } else if (isset($_GET['install'])) {
+        require("install.html");
         die();
-    }
-    else if(isset($_GET['test'])) {
+    } else if (isset($_GET['test'])) {
         include("test.php");
         die();
-    }
-    else if(isset($_GET['info'])) {
+    } else if (isset($_GET['info'])) {
         include("info.php");
         die();
     }
 }
 
 // if curl -> return clipboard only
-if($isCurl) {
+if ($isCurl) {
     require("clip.php");
     die();
 }
 
 require('app.php');
-?>
+
