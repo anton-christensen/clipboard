@@ -6,7 +6,7 @@ on:
       - main
 
 env:
-  DOCKER_HUB_USERNAME: 'hense1994'
+  DOCKER_HUB_USERNAME: 'antonchristensen'
 
 jobs:
   build_and_push:
