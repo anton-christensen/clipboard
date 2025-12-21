@@ -51,7 +51,7 @@
       upload: {highlight: false, progress: 0}
     },
     methods: {
-      isPreviewable: () => true,
+      isPreviewable: () => true;
       humanFileSize: (bytes, si = false, dp = 1) => {
         // function stolen from stack overflow
         const thresh = si ? 1000 : 1024;
