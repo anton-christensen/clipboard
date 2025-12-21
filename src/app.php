@@ -51,10 +51,8 @@
       upload: {highlight: false, progress: 0}
     },
     methods: {
-      isPreviewable: function () {
-        return true;
-      },
-      humanFileSize: function (bytes, si = false, dp = 1) {
+      isPreviewable: () => true;
+      humanFileSize: (bytes, si = false, dp = 1) => {
         // function stolen from stack overflow
         const thresh = si ? 1000 : 1024;
         if (Math.abs(bytes) < thresh) {
@@ -69,38 +67,36 @@
           bytes /= thresh;
           ++u;
         } while (Math.round(Math.abs(bytes) * r) / r >= thresh && u < units.length - 1);
+
         return bytes.toFixed(dp) + ' ' + units[u];
       },
-      uploadFiles: function (files) {
-        self = this;
+      uploadFiles: (files) => {
         const formData = new FormData();
         for (let i = 0; i < files.length; i++) {
           formData.append(files[i].name, files[i]);
         }
 
         // Uploading - for Firefox, Google Chrome and Safari
-        var xhr = new XMLHttpRequest();
+        const xhr = new XMLHttpRequest();
         // Update progress bar
-        xhr.upload.addEventListener('progress', function (evt) {
+        xhr.upload.addEventListener('progress', (evt) => {
           // on progress
-          self.upload.progress = (evt.loaded / evt.total) * 100;
+          this.upload.progress = (evt.loaded / evt.total) * 100;
         }, false);
-        xhr.upload.addEventListener('load', function () {
+        xhr.upload.addEventListener('load', () => {
           // onFileUploadDone
-          self.upload.highlight = true;
+          this.upload.highlight = true;
           setTimeout(() => {
-            self.upload.highlight = false;
-            setTimeout(() => {
-              self.upload.progress = 0;
-            }, 250);
+            this.upload.highlight = false;
+            setTimeout(() => this.upload.progress = 0, 250);
           }, 250);
         }, false);
-        xhr.upload.addEventListener('loadstart', function () {
+        xhr.upload.addEventListener('loadstart', () => {
           // onFileUploadStarted
-          self.upload.progress = 0;
-          self.upload.highlight = false;
+          this.upload.progress = 0;
+          this.upload.highlight = false;
         }, false);
-        xhr.addEventListener('error', function (evt) {
+        xhr.addEventListener('error', (evt) => {
           // onFileUploadServerResponse
           console.log("Error");
           console.log(evt);
@@ -110,18 +106,17 @@
         xhr.open("POST", "?", true);
 
         // Set appropriate headers
-        started_at = new Date();
         xhr.send(formData);
       },
-      uploadFilesFromSelection: function (evt) {
+      uploadFilesFromSelection: (evt) => {
         console.log(evt.target.files)
         this.uploadFiles(evt.target.files);
       },
-      uploadClipboardContents: async function () {
+      uploadClipboardContents: async () => {
         console.log("Copying from local clipboard. this may take a while");
         this.upload.progress = 100;
         this.upload.highlight = true;
-        newClipboard = [];
+        const newClipboard = [];
 
         const clipboardItems = await navigator.clipboard.read();
         for (const clipboardItem of clipboardItems) {
@@ -132,24 +127,22 @@
           }
         }
 
-        // this.clipboard = newClipboard;
         this.uploadFiles(newClipboard)
       },
-      getBlob: async function (label) {
-        return new Promise(function (resolve) {
-          var xhttp = new XMLHttpRequest();
-          xhttp.responseType = "blob";
-          xhttp.onreadystatechange = function () {
-            if (this.readyState === 4 && this.status === 200) {
-              // Typical action to be performed when the document is ready:
-              resolve(new Blob([xhttp.response], {type: label}));
-            }
-          };
-          xhttp.open("GET", "?clip=" + label, true);
-          xhttp.send();
-        });
-      },
-      copyToLocalClipboard: async function () {
+      getBlob: async label => new Promise(resolve => {
+        const xhttp = new XMLHttpRequest();
+
+        xhttp.responseType = "blob";
+        xhttp.onreadystatechange = () => {
+          if (this.readyState === 4 && this.status === 200) {
+            // Typical action to be performed when the document is ready:
+            resolve(new Blob([xhttp.response], {type: label}));
+          }
+        };
+        xhttp.open("GET", "?clip=" + label, true);
+        xhttp.send();
+      }),
+      copyToLocalClipboard: async () => {
         console.log("Copying to local clipboard. this may take a while");
         let data = {};
         for (let i = 0; i < this.clipboard.length; i++) {
@@ -159,42 +152,49 @@
           data[label] = blob;
         }
 
-        navigator.clipboard.write([new ClipboardItem(data)]).then(function (e) {
+        navigator.clipboard.write([new ClipboardItem(data)]).then((e) => {
           /* success */
           console.log(e);
           console.log("WRITE SUCCESS");
-        }, function (e) {
+        }, (e) => {
           console.log(e);
           console.log("WRITE FAIL");
           /* failure */
         });
       }
     },
-    created: async function () {
-      var self = this;
-
-      function handleKeyboardShortcuts() {
-        var ctrlDown = false,
-          ctrlKey = 17,
+    created: async () => {
+      const handleKeyboardShortcuts = () => {
+        const ctrlKey = 17,
           cmdKey = 91,
           vKey = 86,
           cKey = 67;
 
-        document.addEventListener("keyup", function (e) {
-          if (e.keyCode === ctrlKey || e.keyCode === cmdKey) ctrlDown = false;
+        let ctrlDown = false;
+        document.addEventListener("keyup", (e) => {
+          if (e.keyCode === ctrlKey || e.keyCode === cmdKey) {
+            ctrlDown = false;
+          }
         });
-        document.addEventListener("keydown", function (e) {
-          if (e.keyCode === ctrlKey || e.keyCode === cmdKey) ctrlDown = true;
+        document.addEventListener("keydown", (e) => {
+          if (e.keyCode === ctrlKey || e.keyCode === cmdKey) {
+            ctrlDown = true;
+          }
 
-          if (ctrlDown && (e.keyCode === cKey) && window.getSelection().isCollapsed) self.copyToLocalClipboard();
-          if (ctrlDown && (e.keyCode === vKey)) self.uploadClipboardContents();
+          if (ctrlDown && (e.keyCode === cKey) && window.getSelection().isCollapsed) {
+            this.copyToLocalClipboard();
+          }
+
+          if (ctrlDown && (e.keyCode === vKey)) {
+            this.uploadClipboardContents();
+          }
         });
-      }
+      };
 
-      function watchForChanges() {
+      const watchForChanges = () => {
         function getInfo(callback) {
           const request = new XMLHttpRequest();
-          request.onreadystatechange = function () {
+          request.onreadystatechange = () => {
             if (this.readyState === 4 && this.status === 200) {
               // Typical action to be performed when the document is ready:
               callback(request.responseText);
@@ -205,23 +205,22 @@
         }
 
         let currentEditedTime = 0;
-        readRemote = function () {
+        const readRemote = () => {
           getInfo((info) => {
             const parsedInfo = JSON.parse(info);
             const newEditTime = parsedInfo.length === 0 ? 0 : parsedInfo[0].time;
-            if (currentEditedTime !== newEditTime)
-              self.clipboard = parsedInfo.map(x => {
-                return {...x, expanded: false}
-              });
+            if (currentEditedTime !== newEditTime) {
+              self.clipboard = parsedInfo.map(x => ({...x, expanded: false}));
+            }
             currentEditedTime = newEditTime;
           });
         }
         setInterval(readRemote, 1000);
         readRemote();
-      }
+      };
 
-      function handleDropFiles() {
-        let prevDef = function (evt) {
+      const handleDropFiles = () => {
+        const prevDef = (evt) => {
           evt.preventDefault();
           evt.stopPropagation();
         };
@@ -229,16 +228,15 @@
         window.addEventListener("dragover", prevDef, false);
         window.addEventListener("dragleave", prevDef, false);
 
-        window.addEventListener("drop", function (evt) {
+        window.addEventListener("drop", evt => {
           prevDef(evt);
           self.uploadFiles(evt.dataTransfer.files);
         }, false);
-      }
+      };
 
       handleDropFiles();
       handleKeyboardShortcuts();
       watchForChanges();
-
     }
   });
 </script>
