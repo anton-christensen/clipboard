@@ -3,4 +3,5 @@
 dev/
 .dockerignore
 Dockerfile
-src/app/
+app/node_modules
+app/dist

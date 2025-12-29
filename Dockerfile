@@ -15,4 +15,4 @@ RUN chown www-data:www-data /var/www/data
 
 COPY src /var/www/html
 
-COPY --from=app-build /usr/local/app/dist ./app
+COPY --from=app-build /usr/local/app/dist /var/www/html
