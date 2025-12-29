@@ -1,8 +1,17 @@
 <script lang="ts">
+interface ClipboardItem {
+  label: string;
+  mime: string;
+  size: string;
+  hash: string;
+  time: number;
+  expanded?: boolean;
+}
+
 export default {
   data() {
     return {
-      clipboard: [],
+      clipboard: [] as ClipboardItem[],
       upload: { highlight: false, progress: 0 },
     };
   },
@@ -10,7 +19,7 @@ export default {
     isPreviewable: function () {
       return true;
     },
-    humanFileSize: function (bytes, si = false, dp = 1) {
+    humanFileSize: function (bytes: number, si = false, dp = 1) {
       // function stolen from stack overflow
       const thresh = si ? 1000 : 1024;
       if (Math.abs(bytes) < thresh) {
@@ -27,10 +36,10 @@ export default {
       } while (Math.round(Math.abs(bytes) * r) / r >= thresh && u < units.length - 1);
       return bytes.toFixed(dp) + ' ' + units[u];
     },
-    uploadFiles: function (files) {
+    uploadFiles: function (files: FileList | File[]) {
       const formData = new FormData();
-      for (let i = 0; i < files.length; i++) {
-        formData.append(files[i].name, files[i]);
+      for (const item of files) {
+        formData.append(item.name, item);
       }
 
       // Uploading - for Firefox, Google Chrome and Safari
@@ -80,9 +89,19 @@ export default {
       xhr.open('POST', '?', true);
       xhr.send(formData);
     },
-    uploadFilesFromSelection: function (evt) {
-      console.log(evt.target.files);
-      this.uploadFiles(evt.target.files);
+    uploadButtonClicked: function () {
+      const fileInput = this.$refs.files as HTMLInputElement;
+      if (fileInput != null) {
+        fileInput.click();
+      }
+    },
+    uploadFilesFromSelection: function (evt: Event) {
+      if (!(evt.target instanceof HTMLInputElement)) {
+        return;
+      }
+
+      console.log('Selected files', evt.target.files);
+      this.uploadFiles(evt.target.files ?? []);
     },
     uploadClipboardContents: async function () {
       console.log('Copying from local clipboard. this may take a while');
@@ -98,11 +117,10 @@ export default {
         }
       }
 
-      // this.clipboard = newClipboard;
       this.uploadFiles(newClipboard);
     },
-    getBlob: async function (label) {
-      return new Promise(function (resolve) {
+    getBlob: async function (label: string): Promise<Blob> {
+      return new Promise((resolve) => {
         const xhttp = new XMLHttpRequest();
         xhttp.responseType = 'blob';
         xhttp.onreadystatechange = function () {
@@ -117,9 +135,9 @@ export default {
     },
     copyToLocalClipboard: async function () {
       console.log('Copying to local clipboard. this may take a while');
-      const data = {};
-      for (let i = 0; i < this.clipboard.length; i++) {
-        const label = this.clipboard[i].label;
+      const data: Record<string, Blob> = {};
+      for (const item of this.clipboard) {
+        const label = item.label;
         let blob = await this.getBlob(label);
         if (blob.size === 0) blob = new Blob();
         data[label] = blob;
@@ -153,32 +171,33 @@ export default {
       document.addEventListener('keydown', (e) => {
         if (e.keyCode === ctrlKey || e.keyCode === cmdKey) ctrlDown = true;
 
-        if (ctrlDown && e.keyCode === cKey && window.getSelection().isCollapsed)
+        if (ctrlDown && e.keyCode === cKey && window?.getSelection()?.isCollapsed)
           this.copyToLocalClipboard();
         if (ctrlDown && e.keyCode === vKey) this.uploadClipboardContents();
       });
     };
 
     const watchForChanges = () => {
-      function getInfo(callback) {
-        const request = new XMLHttpRequest();
-        request.onreadystatechange = function () {
-          if (this.readyState === 4 && this.status === 200) {
-            // Typical action to be performed when the document is ready:
-            callback(request.responseText);
-          }
-        };
-        request.open('GET', '?info', true);
-        request.send();
-      }
+      const getInfo = () =>
+        new Promise<string>((resolve) => {
+          const request = new XMLHttpRequest();
+          request.onreadystatechange = function () {
+            if (this.readyState === 4 && this.status === 200) {
+              // Typical action to be performed when the document is ready:
+              resolve(request.responseText);
+            }
+          };
+          request.open('GET', '?info', true);
+          request.send();
+        });
 
       let currentEditedTime = 0;
       const readRemote = () => {
-        getInfo((info) => {
+        getInfo().then((info) => {
           const parsedInfo = JSON.parse(info);
           const newEditTime = parsedInfo.length === 0 ? 0 : parsedInfo[0].time;
           if (currentEditedTime !== newEditTime)
-            this.clipboard = parsedInfo.map((x) => {
+            this.clipboard = parsedInfo.map((x: object) => {
               return { ...x, expanded: false };
             });
           currentEditedTime = newEditTime;
@@ -189,7 +208,7 @@ export default {
     };
 
     const handleDropFiles = () => {
-      const prevDef = function (evt) {
+      const prevDef = function (evt: Event) {
         evt.preventDefault();
         evt.stopPropagation();
       };
@@ -201,7 +220,7 @@ export default {
         'drop',
         (evt) => {
           prevDef(evt);
-          this.uploadFiles(evt.dataTransfer.files);
+          this.uploadFiles(evt.dataTransfer?.files ?? []);
         },
         false,
       );
@@ -215,13 +234,6 @@ export default {
 </script>
 
 <template>
-  <input
-    type="file"
-    multiple
-    ref="files"
-    @change="uploadFilesFromSelection"
-    style="display: none"
-  />
   <div class="progress">
     <div
       class="bar visible"
@@ -239,8 +251,15 @@ export default {
       : To upload your local clipboard to the site
     </li>
     <li>
-      <button @click="$refs.files.click()">Upload</button>
+      <button @click="uploadButtonClicked">Upload</button>
       : files by dragging them onto the page
+      <input
+        type="file"
+        multiple
+        ref="files"
+        @change="uploadFilesFromSelection"
+        style="display: none"
+      />
     </li>
     <li>
       <a href="?install">Instructions</a>: for getting OS integrations like
@@ -252,11 +271,9 @@ export default {
   <ul>
     <li v-for="item in clipboard" v-bind:key="item.label">
       <a v-bind:href="'?clip=' + item.label" target="_blank"
-        ><b>{{ item.label }}: </b><span>{{ humanFileSize(item.size) }}</span></a
+        ><b>{{ item.label }}: </b><span>{{ humanFileSize(Number(item.size)) }}</span></a
       >
-      <button v-if="isPreviewable(item.label)" v-on:click="item.expanded = !item.expanded">
-        Preview
-      </button>
+      <button v-if="isPreviewable()" v-on:click="item.expanded = !item.expanded">Preview</button>
       <iframe
         v-if="item.expanded"
         v-bind:src="'?cachekill=' + item.hash + '&clip=' + item.label"
