@@ -2,7 +2,7 @@ name: Lint and build app
 
 on:
   pull_request:
-    branches: ['master']
+    branches: ['main']
     paths: [ '.github/workflows/lint-and-build-app.yml', 'app/**' ]
 
 jobs:
