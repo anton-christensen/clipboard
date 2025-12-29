@@ -12,8 +12,8 @@
     "preview": "vite preview",
     "build-only": "vite build",
     "type-check": "vue-tsc --build",
-    "lint": "eslint ../../clipboard --fix --cache",
-    "format": "prettier --write --experimental-cli src"
+    "lint": "eslint .",
+    "lint:fix": "npm run lint -- --fix"
   },
   "dependencies": {
     "vue": "3.5.26"
@@ -26,13 +26,24 @@
     "@vue/eslint-config-typescript": "14.6.0",
     "@vue/tsconfig": "0.8.1",
     "eslint": "9.39.2",
+    "eslint-config-prettier": "10.1.8",
     "eslint-plugin-vue": "10.6.2",
+    "eslint-plugin-prettier": "5.5.4",
     "jiti": "2.6.1",
     "npm-run-all2": "8.0.4",
     "prettier": "3.7.4",
+    "simple-git-hooks": "2.13.1",
     "typescript": "5.9.3",
     "vite": "7.3.0",
     "vite-plugin-vue-devtools": "8.0.5",
     "vue-tsc": "3.2.1"
+  },
+  "simple-git-hooks": {
+    "pre-commit": "npx lint-staged"
+  },
+  "lint-staged": {
+    "*.{ts,html}": [
+      "eslint --fix"
+    ]
   }
 }
