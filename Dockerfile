@@ -5,7 +5,7 @@ COPY ./app /usr/local/app
 
 RUN npm ci --quiet
 RUN npm run build-only
-RUN mv ./dist/index.html ./dist/app.html
+RUN mv /usr/local/app/dist/index.html /usr/local/app/dist/app.html
 
 FROM php:8.3-apache
 
