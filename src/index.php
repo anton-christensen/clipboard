@@ -11,8 +11,6 @@ header("Access-Control-Allow-Origin: *");
 require("functions.php");
 require("db.php");
 
-$isCurl = str_contains($_SERVER['HTTP_USER_AGENT'], 'curl');
-
 $db = new Database();
 if (count($_FILES) > 0) {
     $db->replacePaste($_FILES);
@@ -37,11 +35,12 @@ if (isset($_GET)) {
     }
 }
 
-// if curl -> return clipboard only
+
+$isCurl = str_contains($_SERVER['HTTP_USER_AGENT'], 'curl');
 if ($isCurl) {
     require("clip.php");
     die();
 }
 
-require('app.php');
+require('app.html');
 

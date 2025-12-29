@@ -3,3 +3,4 @@
 dev/
 .dockerignore
 Dockerfile
+src/app/
