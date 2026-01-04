@@ -24,26 +24,24 @@ body {
   left: 0;
   right: 0;
   height: 0.5rem;
-}
 
-.progress .bar {
-  position: absolute;
-  left: 0;
-  top: 0;
-  width: 0%;
-  height: 0%;
+  .bar {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 0;
+    height: 100%;
 
-  background-color: hsl(230, 100%, 50%);
-  transition: height, width, background-color;
-  transition-duration: .25s;
-}
+    background-color: hsl(230, 100%, 50%);
+    transition: width, background-color;
+    transition-duration: .25s;
 
-.progress .bar.visible {
-  height: 100%;
-}
-
-.progress .bar.done {
-  background-color: hsl(230, 100%, 75%);
+    &.done {
+      background-color: #f1f1f1;
+      transition: background-color;
+      transition-duration: 2s;
+    }
+  }
 }
 
 iframe {

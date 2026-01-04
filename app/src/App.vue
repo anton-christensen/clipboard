@@ -1,18 +1,20 @@
 <script lang="ts">
+import { progressTrackingUpload } from '@/helpers.ts';
+
 interface ClipboardItem {
   label: string;
   mime: string;
   size: string;
   hash: string;
   time: number;
-  expanded?: boolean;
+  expanded: boolean;
 }
 
 export default {
   data() {
     return {
       clipboard: [] as ClipboardItem[],
-      upload: { highlight: false, progress: 0 },
+      upload: { progress: 0, done: false },
     };
   },
   methods: {
@@ -37,57 +39,24 @@ export default {
       return bytes.toFixed(dp) + ' ' + units[u];
     },
     uploadFiles: function (files: FileList | File[]) {
-      const formData = new FormData();
+      const body = new FormData();
       for (const item of files) {
-        formData.append(item.name, item);
+        body.append(item.name, item);
       }
 
-      // Uploading - for Firefox, Google Chrome and Safari
-      const xhr = new XMLHttpRequest();
-      // Update progress bar
-      xhr.upload.addEventListener(
-        'progress',
-        (evt) => {
-          // on progress
-          this.upload.progress = (evt.loaded / evt.total) * 100;
-        },
-        false,
-      );
-      xhr.upload.addEventListener(
-        'load',
-        () => {
-          // onFileUploadDone
-          this.upload.highlight = true;
-          setTimeout(() => {
-            this.upload.highlight = false;
-            setTimeout(() => {
-              this.upload.progress = 0;
-            }, 250);
-          }, 250);
-        },
-        false,
-      );
-      xhr.upload.addEventListener(
-        'loadstart',
-        () => {
-          // onFileUploadStarted
+      progressTrackingUpload('https://clipboard.achri.dk/?', {
+        method: 'POST',
+        body,
+        onProgress: (progress) => (this.upload.progress = progress.progressPercent),
+      }).then(() => {
+        this.upload.done = true;
+        setTimeout(() => {
           this.upload.progress = 0;
-          this.upload.highlight = false;
-        },
-        false,
-      );
-      xhr.addEventListener(
-        'error',
-        function (evt) {
-          // onFileUploadServerResponse
-          console.log('Error');
-          console.log(evt);
-        },
-        false,
-      );
-
-      xhr.open('POST', '?', true);
-      xhr.send(formData);
+          setTimeout(() => {
+            this.upload.done = false;
+          }, 1000);
+        }, 1000);
+      });
     },
     uploadButtonClicked: function () {
       const fileInput = this.$refs.files as HTMLInputElement;
@@ -105,10 +74,8 @@ export default {
     },
     uploadClipboardContents: async function () {
       console.log('Copying from local clipboard. this may take a while');
-      this.upload.progress = 100;
-      this.upload.highlight = true;
-      const newClipboard = [];
 
+      const newClipboard = [];
       const clipboardItems = await navigator.clipboard.read();
       for (const clipboardItem of clipboardItems) {
         for (const type of clipboardItem.types) {
@@ -119,45 +86,34 @@ export default {
 
       this.uploadFiles(newClipboard);
     },
-    getBlob: async function (label: string): Promise<Blob> {
-      return new Promise((resolve) => {
-        const xhttp = new XMLHttpRequest();
-        xhttp.responseType = 'blob';
-        xhttp.onreadystatechange = function () {
-          if (this.readyState === 4 && this.status === 200) {
-            // Typical action to be performed when the document is ready:
-            resolve(new Blob([xhttp.response], { type: label }));
-          }
-        };
-        xhttp.open('GET', '?clip=' + label, true);
-        xhttp.send();
-      });
-    },
+    fetchBlob: (label: string) =>
+      fetch(`https://clipboard.achri.dk/?clip=${label}`).then((response) => response.blob()),
     copyToLocalClipboard: async function () {
+      if (this.clipboard.length === 0) {
+        return;
+      }
+
       console.log('Copying to local clipboard. this may take a while');
       const data: Record<string, Blob> = {};
       for (const item of this.clipboard) {
         const label = item.label;
-        let blob = await this.getBlob(label);
-        if (blob.size === 0) blob = new Blob();
-        data[label] = blob;
+        data[label] = await this.fetchBlob(label);
       }
 
-      navigator.clipboard.write([new ClipboardItem(data)]).then(
-        function (e) {
-          /* success */
+      const clipBoardItems = [new ClipboardItem(data)];
+      navigator.clipboard
+        .write(clipBoardItems)
+        .then((e) => {
           console.log(e);
           console.log('WRITE SUCCESS');
-        },
-        function (e) {
+        })
+        .catch((e) => {
           console.log(e);
           console.log('WRITE FAIL');
-          /* failure */
-        },
-      );
+        });
     },
   },
-  created() {
+  mounted() {
     const handleKeyboardShortcuts = () => {
       let ctrlDown = false;
       const ctrlKey = 17,
@@ -177,32 +133,20 @@ export default {
       });
     };
 
-    const watchForChanges = () => {
-      const getInfo = () =>
-        new Promise<string>((resolve) => {
-          const request = new XMLHttpRequest();
-          request.onreadystatechange = function () {
-            if (this.readyState === 4 && this.status === 200) {
-              // Typical action to be performed when the document is ready:
-              resolve(request.responseText);
-            }
-          };
-          request.open('GET', '?info', true);
-          request.send();
-        });
-
+    const pollChanges = () => {
       let currentEditedTime = 0;
       const readRemote = () => {
-        getInfo().then((info) => {
-          const parsedInfo = JSON.parse(info);
-          const newEditTime = parsedInfo.length === 0 ? 0 : parsedInfo[0].time;
-          if (currentEditedTime !== newEditTime)
-            this.clipboard = parsedInfo.map((x: object) => {
-              return { ...x, expanded: false };
-            });
-          currentEditedTime = newEditTime;
-        });
+        fetch('https://clipboard.achri.dk/?info')
+          .then((response) => response.json())
+          .then((parsedInfo) => {
+            const newEditTime = parsedInfo.length === 0 ? 0 : parsedInfo[0].time;
+            if (currentEditedTime !== newEditTime) {
+              this.clipboard = parsedInfo.map((x: object) => ({ ...x, expanded: false }));
+              currentEditedTime = newEditTime;
+            }
+          });
       };
+
       setInterval(readRemote, 1000);
       readRemote();
     };
@@ -228,7 +172,7 @@ export default {
 
     handleDropFiles();
     handleKeyboardShortcuts();
-    watchForChanges();
+    pollChanges();
   },
 };
 </script>
@@ -236,14 +180,14 @@ export default {
 <template>
   <div class="progress">
     <div
-      class="bar visible"
-      v-bind:class="{ done: upload.highlight }"
+      class="bar"
+      v-bind:class="{ done: upload.done }"
       v-bind:style="{ width: upload.progress + '%' }"
     ></div>
   </div>
   <ul>
     <li>
-      <button @click="copyToLocalClipboard">Ctrl+C</button>
+      <button @click="copyToLocalClipboard" v-bind:disabled="clipboard.length === 0">Ctrl+C</button>
       : To copy data to your local clipboard
     </li>
     <li>
@@ -270,13 +214,13 @@ export default {
   <p>Below is listed the currently uploaded representations of the online clipboard</p>
   <ul>
     <li v-for="item in clipboard" v-bind:key="item.label">
-      <a v-bind:href="'?clip=' + item.label" target="_blank"
+      <a v-bind:href="'https://clipboard.achri.dk/?clip=' + item.label" target="_blank"
         ><b>{{ item.label }}: </b><span>{{ humanFileSize(Number(item.size)) }}</span></a
       >
       <button v-if="isPreviewable()" v-on:click="item.expanded = !item.expanded">Preview</button>
       <iframe
         v-if="item.expanded"
-        v-bind:src="'?cachekill=' + item.hash + '&clip=' + item.label"
+        v-bind:src="'https://clipboard.achri.dk/?cachekill=' + item.hash + '&clip=' + item.label"
       ></iframe>
     </li>
   </ul>
