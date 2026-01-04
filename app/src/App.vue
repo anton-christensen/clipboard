@@ -114,24 +114,15 @@ export default {
     },
   },
   mounted() {
-    const handleKeyboardShortcuts = () => {
-      let ctrlDown = false;
-      const ctrlKey = 17,
-        cmdKey = 91,
-        vKey = 86,
-        cKey = 67;
-
-      document.addEventListener('keyup', (e) => {
-        if (e.keyCode === ctrlKey || e.keyCode === cmdKey) ctrlDown = false;
-      });
-      document.addEventListener('keydown', (e) => {
-        if (e.keyCode === ctrlKey || e.keyCode === cmdKey) ctrlDown = true;
-
-        if (ctrlDown && e.keyCode === cKey && window?.getSelection()?.isCollapsed)
+    document.addEventListener('keydown', (event) => {
+      if (event.ctrlKey || event.metaKey) {
+        if (event.key === 'c' && window.getSelection()?.isCollapsed) {
           this.copyToLocalClipboard();
-        if (ctrlDown && e.keyCode === vKey) this.uploadClipboardContents();
-      });
-    };
+        } else if (event.key === 'v') {
+          this.uploadClipboardContents();
+        }
+      }
+    });
 
     const pollChanges = () => {
       let currentEditedTime = 0;
@@ -171,7 +162,6 @@ export default {
     };
 
     handleDropFiles();
-    handleKeyboardShortcuts();
     pollChanges();
   },
 };
