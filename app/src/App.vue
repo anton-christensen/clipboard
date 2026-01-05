@@ -78,10 +78,10 @@ export default {
       );
     },
     fetchClipboardBlob: function (label: string): Promise<Blob> {
-      return fetch(`https://clipboard.achri.dk/?clip=${label}`).then((response) => response.blob());
+      return fetch(`?clip=${label}`).then((response) => response.blob());
     },
     fetchClipboardInfo: function (): Promise<ClipboardItemInfo[]> {
-      return fetch('https://clipboard.achri.dk/?info').then((response) => response.json());
+      return fetch('?info').then((response) => response.json());
     },
 
     readAndUpload: async function () {
@@ -114,7 +114,7 @@ export default {
       }
 
       progressTrackingUpload(
-        'https://clipboard.achri.dk/?',
+        '?',
         {
           method: 'POST',
           body,
@@ -214,15 +214,13 @@ export default {
   <p>Below is listed the currently uploaded representations of the online clipboard</p>
   <ul>
     <li v-for="item in clipboard" v-bind:key="item.info.label">
-      <a v-bind:href="'https://clipboard.achri.dk/?clip=' + item.info.label" target="_blank"
+      <a v-bind:href="'?clip=' + item.info.label" target="_blank"
         ><b>{{ item.info.label }}: </b><span>{{ humanFileSize(Number(item.info.size)) }}</span></a
       >
       <button v-if="isPreviewable()" v-on:click="item.expanded = !item.expanded">Preview</button>
       <iframe
         v-if="item.expanded"
-        v-bind:src="
-          'https://clipboard.achri.dk/?cachekill=' + item.info.hash + '&clip=' + item.info.label
-        "
+        v-bind:src="'?cachekill=' + item.info.hash + '&clip=' + item.info.label"
       ></iframe>
     </li>
   </ul>
