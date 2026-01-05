@@ -9,12 +9,12 @@ export const progressTrackingUpload = (
   init: {
     method: string;
     body: XMLHttpRequestBodyInit;
-    onProgress: (progress: ProgressTracking) => void;
   },
+  onProgress: (progress: ProgressTracking) => void,
 ): Promise<Response> =>
   new Promise((resolve, reject) => {
     const handler = ({ loaded, total }: ProgressEvent) => {
-      init.onProgress({
+      onProgress({
         totalBytes: total,
         bytesUploaded: loaded,
         progressPercent: (loaded / total) * 100,
