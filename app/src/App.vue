@@ -30,12 +30,12 @@ function fetchAndWrite() {
 }
 
 function fetchClipboardBlobs(): Promise<Record<string, Blob>> {
-  const promises = clipboard.value.map(({ info: { label } }) =>
-    fetchClipboardBlob(label).then((blob) => ({ label, blob })),
-  );
-
-  return Promise.all(promises).then((result) =>
-    result.reduce(
+  return Promise.all(
+    clipboard.value.map(({ info: { label } }) =>
+      fetchClipboardBlob(label).then((blob) => ({ label, blob })),
+    ),
+  ).then((labelledBlobs) =>
+    labelledBlobs.reduce(
       (acc, { blob, label }) => {
         acc[label] = blob;
         return acc;
@@ -159,16 +159,18 @@ onMounted(() => {
     <li>
       <button @click="readAndUpload">Ctrl+V</button>
       : To upload your local clipboard to the site
+      <button @click="readAndUpload" :disabled="uploadProgress !== 0">Ctrl+V</button>
     </li>
     <li>
       <button @click="uploadButtonClicked">Upload</button>
       : files by dragging them onto the page
+      <button @click="uploadButtonClicked" :disabled="uploadProgress !== 0">Upload</button>
       <input
         type="file"
         multiple
         ref="file-input"
         @change="uploadFilesFromSelection"
-        style="display: none"
+        :disabled="uploadProgress !== 0"
       />
     </li>
     <li>
@@ -179,3 +181,21 @@ onMounted(() => {
 
   <ClipboardItems :clipboard />
 </template>
+
+<style scoped>
+input[type='file'] {
+  display: none;
+}
+
+code {
+  padding: 0.2em 0.4em;
+  border-radius: 0.5em;
+
+  font-family:
+    Consolas,
+    Liberation Mono,
+    monospace;
+  font-size: 80%;
+  background-color: hsl(0, 0%, 90%);
+}
+</style>
