@@ -1,6 +1,12 @@
 <script setup lang="ts">
 import { onMounted, onUnmounted, provide, ref, useTemplateRef } from 'vue';
-import { BASE_URL, fetchClipboardBlob, fetchClipboardInfo, uploadToClipboard } from '@/api.ts';
+import {
+  BASE_URL,
+  fetchClipboardBlob,
+  fetchClipboardInfo,
+  fileFromBlob,
+  uploadToClipboard,
+} from '@/api.ts';
 import ClipboardItems from '@/components/Clipboard/ClipboardItems.vue';
 import type { ClipboardObject } from '@/components/Clipboard/ClipboardItem.vue';
 
@@ -45,9 +51,7 @@ function readAndUpload() {
       Promise.all(
         clipboardItems.flatMap((clipboardItem) =>
           clipboardItem.types.map((type) =>
-            clipboardItem
-              .getType(type)
-              .then((blob) => new File([blob], `LABEL_${encodeURIComponent(type)}`)),
+            clipboardItem.getType(type).then((blob) => fileFromBlob(blob, type)),
           ),
         ),
       ),
@@ -116,17 +120,25 @@ onMounted(() => {
 
 onMounted(() => {
   window.addEventListener('dragover', (e) => {
-    e.dataTransfer!.dropEffect = 'copy';
     e.preventDefault();
+    e.dataTransfer!.dropEffect = 'copy';
   });
-  window.addEventListener('drop', (e) => {
-    if (e.dataTransfer?.items == null) {
-      return;
-    }
 
-    if ([...e.dataTransfer.items].some((item) => item.kind === 'file')) {
-      e.preventDefault();
-    }
+  window.addEventListener('drop', (e) => {
+    e.preventDefault();
+
+    Promise.all(
+      [...(e.dataTransfer?.items ?? [])].map((item) => {
+        if (item.kind == 'file') {
+          return Promise.resolve(item.getAsFile()!);
+        }
+
+        return new Promise<File>((resolve) => {
+          const type = item.type;
+          item.getAsString((data) => resolve(fileFromBlob(new Blob([data]), type)));
+        });
+      }),
+    ).then((files) => uploadFiles(files));
   });
 });
 

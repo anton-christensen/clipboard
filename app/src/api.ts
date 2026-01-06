@@ -19,6 +19,9 @@ interface ProgressTracking {
   progressPercent: number;
 }
 
+export const fileFromBlob = (blob: Blob, type: string) =>
+  new File([blob], `LABEL_${encodeURIComponent(type)}`, { type });
+
 export const uploadToClipboard = (
   formData: FormData,
   onProgress: (progress: ProgressTracking) => void,
