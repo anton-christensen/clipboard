@@ -1,14 +1,12 @@
 <script setup lang="ts">
 import { ref, onMounted, useTemplateRef, onUnmounted } from 'vue';
-import { progressTrackingUpload } from '@/helpers.ts';
-
-interface ClipboardItemInfo {
-  label: string;
-  mime: string;
-  size: string;
-  hash: string;
-  time: number;
-}
+import {
+  BASE_URL,
+  type ClipboardItemInfo,
+  fetchClipboardBlob,
+  fetchClipboardInfo,
+  uploadToClipboard,
+} from '@/api.ts';
 
 interface ClipboardItem {
   info: ClipboardItemInfo;
@@ -71,14 +69,6 @@ function fetchClipboardBlobs(): Promise<Record<string, Blob>> {
   );
 }
 
-function fetchClipboardBlob(label: string): Promise<Blob> {
-  return fetch(`?clip=${label}`).then((response) => response.blob());
-}
-
-function fetchClipboardInfo(): Promise<ClipboardItemInfo[]> {
-  return fetch('?info').then((response) => response.json());
-}
-
 function readAndUpload() {
   navigator.clipboard
     .read()
@@ -111,23 +101,18 @@ function uploadFiles(files: FileList | File[]) {
     body.append(item.name, item);
   }
 
-  progressTrackingUpload(
-    '?',
-    {
-      method: 'POST',
-      body,
-    },
-    (progress) => (upload.value.progress = progress.progressPercent),
-  ).then(() => {
-    fetchAndUpdateClipboardInfo();
-    upload.value.done = true;
-    setTimeout(() => {
-      upload.value.progress = 0;
+  uploadToClipboard(body, (progress) => (upload.value.progress = progress.progressPercent)).then(
+    () => {
+      fetchAndUpdateClipboardInfo();
+      upload.value.done = true;
       setTimeout(() => {
-        upload.value.done = false;
+        upload.value.progress = 0;
+        setTimeout(() => {
+          upload.value.done = false;
+        }, 1000);
       }, 1000);
-    }, 1000);
-  });
+    },
+  );
 }
 
 function fetchAndUpdateClipboardInfo() {
@@ -213,13 +198,13 @@ onMounted(() => {
   <p>Below is listed the currently uploaded representations of the online clipboard</p>
   <ul>
     <li v-for="item in clipboard" v-bind:key="item.info.label">
-      <a v-bind:href="'?clip=' + item.info.label" target="_blank"
+      <a v-bind:href="`${BASE_URL}?clip=${item.info.label}`" target="_blank"
         ><b>{{ item.info.label }}: </b><span>{{ humanFileSize(Number(item.info.size)) }}</span></a
       >
       <button v-if="isPreviewable()" v-on:click="item.expanded = !item.expanded">Preview</button>
       <iframe
         v-if="item.expanded"
-        v-bind:src="'?cachekill=' + item.info.hash + '&clip=' + item.info.label"
+        v-bind:src="`${BASE_URL}?cachekill=${item.info.hash}&clip=${item.info.label}`"
       ></iframe>
     </li>
   </ul>

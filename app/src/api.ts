@@ -1,10 +1,31 @@
-export interface ProgressTracking {
+export const BASE_URL = process.env.NODE_ENV === 'development' ? 'https://clipboard.achri.dk/' : '';
+
+export interface ClipboardItemInfo {
+  label: string;
+  mime: string;
+  size: string;
+  hash: string;
+  time: number;
+}
+export const fetchClipboardInfo = (): Promise<ClipboardItemInfo[]> =>
+  fetch(`${BASE_URL}?info`).then((response) => response.json());
+
+export const fetchClipboardBlob = (label: string): Promise<Blob> =>
+  fetch(`${BASE_URL}?clip=${label}`).then((response) => response.blob());
+
+interface ProgressTracking {
   totalBytes: number;
   bytesUploaded: number;
   progressPercent: number;
 }
 
-export const progressTrackingUpload = (
+export const uploadToClipboard = (
+  formData: FormData,
+  onProgress: (progress: ProgressTracking) => void,
+): Promise<Response> =>
+  progressTrackingUpload(`${BASE_URL}?`, { method: 'POST', body: formData }, onProgress);
+
+const progressTrackingUpload = (
   url: string,
   init: {
     method: string;
