@@ -117,7 +117,10 @@ function uploadFiles(files: FileList | File[]) {
 
 function fetchAndUpdateClipboardInfo() {
   fetchClipboardInfo().then((clipboardItemInfos) => {
-    if (clipboard.value[0]?.info.time !== clipboardItemInfos[0]?.time) {
+    if (
+      clipboard.value.length !== clipboardItemInfos.length ||
+      clipboard.value.some((value, index) => value.info.hash !== clipboardItemInfos[index]?.hash)
+    ) {
       clipboard.value = clipboardItemInfos.map((info) => ({ info, expanded: false }));
     }
   });
