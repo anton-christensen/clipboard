@@ -56,15 +56,22 @@ const progressTrackingUpload = (
 
     xhr.onreadystatechange = () => {
       if (xhr.readyState === 4) {
-        resolve(
-          new Response(xhr.response, {
+        try {
+          const response = new Response(xhr.response, {
             status: xhr.status,
             statusText: xhr.statusText,
-          }),
-        );
+          });
+          resolve(response);
+        } catch (error) {
+          reject(error);
+        }
       }
     };
 
     xhr.open(init.method, url, true);
-    xhr.send(init.body);
+    try {
+      xhr.send(init.body);
+    } catch (error) {
+      reject(error);
+    }
   });

@@ -9,6 +9,7 @@ import {
 } from '@/api.ts';
 import ClipboardItems from '@/components/Clipboard/ClipboardItems.vue';
 import type { ClipboardObject } from '@/components/Clipboard/ClipboardItem.vue';
+import ProgressBar from '@/components/ProgressBar.vue';
 
 const fileInputRef = useTemplateRef('file-input');
 function uploadButtonClicked() {
@@ -24,7 +25,7 @@ function fetchAndWrite() {
   fetchClipboardBlobs()
     .then((blobRecord) => new ClipboardItem(blobRecord))
     .then((clipBoardItem) => navigator.clipboard.write([clipBoardItem]))
-    .then(() => console.log('Successfully wrote to write to local clipboard'))
+    .then(() => console.info('Successfully wrote to local clipboard'))
     .catch((err) => console.warn('Failed to write to local clipboard', err));
 }
 
@@ -67,25 +68,21 @@ function uploadFilesFromSelection(evt: Event) {
   uploadFiles(evt.target.files ?? []);
 }
 
-const upload = ref({ progress: 0, done: false });
+const uploadProgress = ref(0);
 function uploadFiles(files: FileList | File[]) {
+  if (uploadProgress.value !== 0 || files.length === 0) {
+    return;
+  }
+
   const body = new FormData();
   for (const item of files) {
     body.append(item.name, item);
   }
 
-  uploadToClipboard(body, (progress) => (upload.value.progress = progress.progressPercent)).then(
-    () => {
-      fetchAndUpdateClipboardInfo();
-      upload.value.done = true;
-      setTimeout(() => {
-        upload.value.progress = 0;
-        setTimeout(() => {
-          upload.value.done = false;
-        }, 1000);
-      }, 1000);
-    },
-  );
+  uploadToClipboard(body, ({ progressPercent }) => (uploadProgress.value = progressPercent))
+    .then(() => console.info('Successfully uploaded to external clipboard'))
+    .catch((err) => console.warn('Failed to upload to external clipboard', err))
+    .then(() => fetchAndUpdateClipboardInfo());
 }
 
 function fetchAndUpdateClipboardInfo() {
@@ -153,9 +150,7 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="progress">
-    <div class="bar" :class="{ done: upload.done }" :style="{ width: upload.progress + '%' }"></div>
-  </div>
+  <ProgressBar v-model="uploadProgress" />
   <ul>
     <li>
       <button @click="fetchAndWrite" :disabled="clipboard.length === 0">Ctrl+C</button>
