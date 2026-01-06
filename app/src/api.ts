@@ -3,7 +3,7 @@ export const BASE_URL = process.env.NODE_ENV === 'development' ? 'https://clipbo
 export interface ClipboardItemInfo {
   label: string;
   mime: string;
-  size: string;
+  size: number;
   hash: string;
   time: number;
 }

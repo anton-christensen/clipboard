@@ -1,46 +1,15 @@
 <script setup lang="ts">
-import { ref, onMounted, useTemplateRef, onUnmounted } from 'vue';
-import {
-  BASE_URL,
-  type ClipboardItemInfo,
-  fetchClipboardBlob,
-  fetchClipboardInfo,
-  uploadToClipboard,
-} from '@/api.ts';
-
-interface ClipboardItem {
-  info: ClipboardItemInfo;
-  expanded: boolean;
-}
-
-function isPreviewable() {
-  return true;
-}
-
-function humanFileSize(bytes: number, fractionDigits = 1) {
-  const threshold = 1000;
-  const units = ['kB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB'];
-
-  if (Math.abs(bytes) < threshold) {
-    return `${bytes} B`;
-  }
-
-  let u = -1;
-  const r = 10 ** fractionDigits;
-  do {
-    bytes /= threshold;
-    ++u;
-  } while (Math.round(Math.abs(bytes) * r) / r >= threshold && u < units.length - 1);
-
-  return `${bytes.toFixed(fractionDigits)} ${units[u]}`;
-}
+import { onMounted, onUnmounted, provide, ref, useTemplateRef } from 'vue';
+import { BASE_URL, fetchClipboardBlob, fetchClipboardInfo, uploadToClipboard } from '@/api.ts';
+import ClipboardItems from '@/components/Clipboard/ClipboardItems.vue';
+import type { ClipboardObject } from '@/components/Clipboard/ClipboardItem.vue';
 
 const fileInputRef = useTemplateRef('file-input');
 function uploadButtonClicked() {
   fileInputRef.value?.click();
 }
 
-const clipboard = ref([] as ClipboardItem[]);
+const clipboard = ref([] as ClipboardObject[]);
 function fetchAndWrite() {
   if (clipboard.value.length === 0) {
     return;
@@ -126,6 +95,13 @@ function fetchAndUpdateClipboardInfo() {
   });
 }
 
+function toggleExpansion(index: number) {
+  if (clipboard.value[index] != null) {
+    clipboard.value[index].expanded = !clipboard.value[index].expanded;
+  }
+}
+provide('toggleExpansion', toggleExpansion);
+
 onMounted(() => {
   document.addEventListener('keydown', (event) => {
     if (event.ctrlKey || event.metaKey) {
@@ -166,15 +142,11 @@ onMounted(() => {
 
 <template>
   <div class="progress">
-    <div
-      class="bar"
-      v-bind:class="{ done: upload.done }"
-      v-bind:style="{ width: upload.progress + '%' }"
-    ></div>
+    <div class="bar" :class="{ done: upload.done }" :style="{ width: upload.progress + '%' }"></div>
   </div>
   <ul>
     <li>
-      <button @click="fetchAndWrite" v-bind:disabled="clipboard.length === 0">Ctrl+C</button>
+      <button @click="fetchAndWrite" :disabled="clipboard.length === 0">Ctrl+C</button>
       : To copy data to your local clipboard
     </li>
     <li>
@@ -198,17 +170,5 @@ onMounted(() => {
     </li>
   </ul>
 
-  <p>Below is listed the currently uploaded representations of the online clipboard</p>
-  <ul>
-    <li v-for="item in clipboard" v-bind:key="item.info.label">
-      <a v-bind:href="`${BASE_URL}?clip=${item.info.label}`" target="_blank"
-        ><b>{{ item.info.label }}: </b><span>{{ humanFileSize(Number(item.info.size)) }}</span></a
-      >
-      <button v-if="isPreviewable()" v-on:click="item.expanded = !item.expanded">Preview</button>
-      <iframe
-        v-if="item.expanded"
-        v-bind:src="`${BASE_URL}?cachekill=${item.info.hash}&clip=${item.info.label}`"
-      ></iframe>
-    </li>
-  </ul>
+  <ClipboardItems :clipboard />
 </template>
