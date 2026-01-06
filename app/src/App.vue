@@ -1,48 +1,22 @@
 <script setup lang="ts">
-import { ref, onMounted, useTemplateRef, onUnmounted } from 'vue';
-import { progressTrackingUpload } from '@/helpers.ts';
-
-interface ClipboardItemInfo {
-  label: string;
-  mime: string;
-  size: string;
-  hash: string;
-  time: number;
-}
-
-interface ClipboardItem {
-  info: ClipboardItemInfo;
-  expanded: boolean;
-}
-
-function isPreviewable() {
-  return true;
-}
-
-function humanFileSize(bytes: number, fractionDigits = 1) {
-  const threshold = 1000;
-  const units = ['kB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB'];
-
-  if (Math.abs(bytes) < threshold) {
-    return `${bytes} B`;
-  }
-
-  let u = -1;
-  const r = 10 ** fractionDigits;
-  do {
-    bytes /= threshold;
-    ++u;
-  } while (Math.round(Math.abs(bytes) * r) / r >= threshold && u < units.length - 1);
-
-  return `${bytes.toFixed(fractionDigits)} ${units[u]}`;
-}
+import { onMounted, onUnmounted, provide, ref, useTemplateRef } from 'vue';
+import {
+  BASE_URL,
+  fetchClipboardBlob,
+  fetchClipboardInfo,
+  fileFromBlob,
+  uploadToClipboard,
+} from '@/api.ts';
+import ClipboardItems from '@/components/Clipboard/ClipboardItems.vue';
+import type { ClipboardObject } from '@/components/Clipboard/ClipboardItem.vue';
+import ProgressBar from '@/components/ProgressBar.vue';
 
 const fileInputRef = useTemplateRef('file-input');
 function uploadButtonClicked() {
   fileInputRef.value?.click();
 }
 
-const clipboard = ref([] as ClipboardItem[]);
+const clipboard = ref([] as ClipboardObject[]);
 function fetchAndWrite() {
   if (clipboard.value.length === 0) {
     return;
@@ -51,17 +25,17 @@ function fetchAndWrite() {
   fetchClipboardBlobs()
     .then((blobRecord) => new ClipboardItem(blobRecord))
     .then((clipBoardItem) => navigator.clipboard.write([clipBoardItem]))
-    .then(() => console.log('Successfully wrote to write to local clipboard'))
+    .then(() => console.info('Successfully wrote to local clipboard'))
     .catch((err) => console.warn('Failed to write to local clipboard', err));
 }
 
 function fetchClipboardBlobs(): Promise<Record<string, Blob>> {
-  const promises = clipboard.value.map(({ info: { label } }) =>
-    fetchClipboardBlob(label).then((blob) => ({ label, blob })),
-  );
-
-  return Promise.all(promises).then((result) =>
-    result.reduce(
+  return Promise.all(
+    clipboard.value.map(({ info: { label } }) =>
+      fetchClipboardBlob(label).then((blob) => ({ label, blob })),
+    ),
+  ).then((labelledBlobs) =>
+    labelledBlobs.reduce(
       (acc, { blob, label }) => {
         acc[label] = blob;
         return acc;
@@ -71,14 +45,6 @@ function fetchClipboardBlobs(): Promise<Record<string, Blob>> {
   );
 }
 
-function fetchClipboardBlob(label: string): Promise<Blob> {
-  return fetch(`?clip=${label}`).then((response) => response.blob());
-}
-
-function fetchClipboardInfo(): Promise<ClipboardItemInfo[]> {
-  return fetch('?info').then((response) => response.json());
-}
-
 function readAndUpload() {
   navigator.clipboard
     .read()
@@ -86,9 +52,7 @@ function readAndUpload() {
       Promise.all(
         clipboardItems.flatMap((clipboardItem) =>
           clipboardItem.types.map((type) =>
-            clipboardItem
-              .getType(type)
-              .then((blob) => new File([blob], `LABEL_${encodeURIComponent(type)}`)),
+            clipboardItem.getType(type).then((blob) => fileFromBlob(blob, type)),
           ),
         ),
       ),
@@ -104,39 +68,40 @@ function uploadFilesFromSelection(evt: Event) {
   uploadFiles(evt.target.files ?? []);
 }
 
-const upload = ref({ progress: 0, done: false });
+const uploadProgress = ref(0);
 function uploadFiles(files: FileList | File[]) {
+  if (uploadProgress.value !== 0 || files.length === 0) {
+    return;
+  }
+
   const body = new FormData();
   for (const item of files) {
     body.append(item.name, item);
   }
 
-  progressTrackingUpload(
-    '?',
-    {
-      method: 'POST',
-      body,
-    },
-    (progress) => (upload.value.progress = progress.progressPercent),
-  ).then(() => {
-    fetchAndUpdateClipboardInfo();
-    upload.value.done = true;
-    setTimeout(() => {
-      upload.value.progress = 0;
-      setTimeout(() => {
-        upload.value.done = false;
-      }, 1000);
-    }, 1000);
-  });
+  uploadToClipboard(body, ({ progressPercent }) => (uploadProgress.value = progressPercent))
+    .then(() => console.info('Successfully uploaded to external clipboard'))
+    .catch((err) => console.warn('Failed to upload to external clipboard', err))
+    .then(() => fetchAndUpdateClipboardInfo());
 }
 
 function fetchAndUpdateClipboardInfo() {
   fetchClipboardInfo().then((clipboardItemInfos) => {
-    if (clipboard.value[0]?.info.time !== clipboardItemInfos[0]?.time) {
+    if (
+      clipboard.value.length !== clipboardItemInfos.length ||
+      clipboard.value.some((value, index) => value.info.hash !== clipboardItemInfos[index]?.hash)
+    ) {
       clipboard.value = clipboardItemInfos.map((info) => ({ info, expanded: false }));
     }
   });
 }
+
+function toggleExpansion(index: number) {
+  if (clipboard.value[index] != null) {
+    clipboard.value[index].expanded = !clipboard.value[index].expanded;
+  }
+}
+provide('toggleExpansion', toggleExpansion);
 
 onMounted(() => {
   document.addEventListener('keydown', (event) => {
@@ -152,17 +117,25 @@ onMounted(() => {
 
 onMounted(() => {
   window.addEventListener('dragover', (e) => {
-    e.dataTransfer!.dropEffect = 'copy';
     e.preventDefault();
+    e.dataTransfer!.dropEffect = 'copy';
   });
-  window.addEventListener('drop', (e) => {
-    if (e.dataTransfer?.items == null) {
-      return;
-    }
 
-    if ([...e.dataTransfer.items].some((item) => item.kind === 'file')) {
-      e.preventDefault();
-    }
+  window.addEventListener('drop', (e) => {
+    e.preventDefault();
+
+    Promise.all(
+      [...(e.dataTransfer?.items ?? [])].map((item) => {
+        if (item.kind == 'file') {
+          return Promise.resolve(item.getAsFile()!);
+        }
+
+        return new Promise<File>((resolve) => {
+          const type = item.type;
+          item.getAsString((data) => resolve(fileFromBlob(new Blob([data]), type)));
+        });
+      }),
+    ).then((files) => uploadFiles(files));
   });
 });
 
@@ -177,50 +150,52 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="progress">
-    <div
-      class="bar"
-      v-bind:class="{ done: upload.done }"
-      v-bind:style="{ width: upload.progress + '%' }"
-    ></div>
-  </div>
+  <ProgressBar v-model="uploadProgress" />
   <ul>
     <li>
-      <button @click="fetchAndWrite" v-bind:disabled="clipboard.length === 0">Ctrl+C</button>
+      <button @click="fetchAndWrite" :disabled="clipboard.length === 0">Ctrl+C</button>
       : To copy data to your local clipboard
     </li>
     <li>
       <button @click="readAndUpload">Ctrl+V</button>
       : To upload your local clipboard to the site
+      <button @click="readAndUpload" :disabled="uploadProgress !== 0">Ctrl+V</button>
     </li>
     <li>
       <button @click="uploadButtonClicked">Upload</button>
       : files by dragging them onto the page
+      <button @click="uploadButtonClicked" :disabled="uploadProgress !== 0">Upload</button>
       <input
         type="file"
         multiple
         ref="file-input"
         @change="uploadFilesFromSelection"
-        style="display: none"
+        :disabled="uploadProgress !== 0"
       />
     </li>
     <li>
-      <a href="?install">Instructions</a>: for getting OS integrations like
+      <a :href="`${BASE_URL}?install`">Instructions</a>: for getting OS integrations like
       <code>Ctrl+Win+C/V</code> to copy and paste to/from clipboard from anywhere directly
     </li>
   </ul>
 
-  <p>Below is listed the currently uploaded representations of the online clipboard</p>
-  <ul>
-    <li v-for="item in clipboard" v-bind:key="item.info.label">
-      <a v-bind:href="'?clip=' + item.info.label" target="_blank"
-        ><b>{{ item.info.label }}: </b><span>{{ humanFileSize(Number(item.info.size)) }}</span></a
-      >
-      <button v-if="isPreviewable()" v-on:click="item.expanded = !item.expanded">Preview</button>
-      <iframe
-        v-if="item.expanded"
-        v-bind:src="'?cachekill=' + item.info.hash + '&clip=' + item.info.label"
-      ></iframe>
-    </li>
-  </ul>
+  <ClipboardItems :clipboard />
 </template>
+
+<style scoped>
+input[type='file'] {
+  display: none;
+}
+
+code {
+  padding: 0.2em 0.4em;
+  border-radius: 0.5em;
+
+  font-family:
+    Consolas,
+    Liberation Mono,
+    monospace;
+  font-size: 80%;
+  background-color: hsl(0, 0%, 90%);
+}
+</style>

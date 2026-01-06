@@ -20,7 +20,7 @@
   },
   "devDependencies": {
     "@tsconfig/node24": "24.0.3",
-    "@types/node": "24.1.0",
+    "@types/node": "24.10.4",
     "@vitejs/plugin-vue": "6.0.3",
     "@vue/eslint-config-prettier": "10.2.0",
     "@vue/eslint-config-typescript": "14.6.0",
@@ -36,7 +36,7 @@
     "typescript": "5.9.3",
     "vite": "7.3.0",
     "vite-plugin-vue-devtools": "8.0.5",
-    "vue-tsc": "3.2.1"
+    "vue-tsc": "3.2.2"
   },
   "simple-git-hooks": {
     "pre-commit": "npx lint-staged"
