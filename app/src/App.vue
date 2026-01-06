@@ -1,4 +1,5 @@
-<script lang="ts">
+<script setup lang="ts">
+import { ref, onMounted, useTemplateRef, onUnmounted } from 'vue';
 import { progressTrackingUpload } from '@/helpers.ts';
 
 interface ClipboardItemInfo {
@@ -14,167 +15,167 @@ interface ClipboardItem {
   expanded: boolean;
 }
 
-let infoPollInterval: number;
+function isPreviewable() {
+  return true;
+}
 
-export default {
-  data() {
-    return {
-      clipboard: [] as ClipboardItem[],
-      upload: { progress: 0, done: false },
-    };
-  },
-  methods: {
-    isPreviewable: function () {
-      return true;
-    },
-    humanFileSize: function (bytes: number, dp = 1) {
-      const threshold = 1000;
-      const units = ['kB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB'];
+function humanFileSize(bytes: number, fractionDigits = 1) {
+  const threshold = 1000;
+  const units = ['kB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB'];
 
-      if (Math.abs(bytes) < threshold) {
-        return `${bytes} B`;
-      }
+  if (Math.abs(bytes) < threshold) {
+    return `${bytes} B`;
+  }
 
-      let u = -1;
-      const r = 10 ** dp;
-      do {
-        bytes /= threshold;
-        ++u;
-      } while (Math.round(Math.abs(bytes) * r) / r >= threshold && u < units.length - 1);
+  let u = -1;
+  const r = 10 ** fractionDigits;
+  do {
+    bytes /= threshold;
+    ++u;
+  } while (Math.round(Math.abs(bytes) * r) / r >= threshold && u < units.length - 1);
 
-      return `${bytes.toFixed(dp)} ${units[u]}`;
-    },
-    uploadButtonClicked: function () {
-      const fileInput = this.$refs.files as HTMLInputElement;
-      if (fileInput != null) {
-        fileInput.click();
-      }
-    },
+  return `${bytes.toFixed(fractionDigits)} ${units[u]}`;
+}
 
-    fetchAndWrite: function () {
-      if (this.clipboard.length === 0) {
-        return;
-      }
+function uploadButtonClicked() {
+  const fileInput = useTemplateRef('file-input').value as HTMLInputElement;
+  if (fileInput != null) {
+    fileInput.click();
+  }
+}
 
-      this.fetchClipboardBlobs()
-        .then((blobRecord) => new ClipboardItem(blobRecord))
-        .then((clipBoardItem) => navigator.clipboard.write([clipBoardItem]))
-        .then(() => console.log('Successfully wrote to write to local clipboard'))
-        .catch((err) => console.warn('Failed to write to local clipboard', err));
-    },
-    fetchClipboardBlobs: function (): Promise<Record<string, Blob>> {
-      const promises = this.clipboard.map(({ info: { label } }) =>
-        this.fetchClipboardBlob(label).then((blob) => ({ label, blob })),
-      );
+const clipboard = ref([] as ClipboardItem[]);
+function fetchAndWrite() {
+  if (clipboard.value.length === 0) {
+    return;
+  }
 
-      return Promise.all(promises).then((result) =>
-        result.reduce(
-          (acc, { blob, label }) => {
-            acc[label] = blob;
-            return acc;
-          },
-          {} as Record<string, Blob>,
-        ),
-      );
-    },
-    fetchClipboardBlob: function (label: string): Promise<Blob> {
-      return fetch(`?clip=${label}`).then((response) => response.blob());
-    },
-    fetchClipboardInfo: function (): Promise<ClipboardItemInfo[]> {
-      return fetch('?info').then((response) => response.json());
-    },
+  fetchClipboardBlobs()
+    .then((blobRecord) => new ClipboardItem(blobRecord))
+    .then((clipBoardItem) => navigator.clipboard.write([clipBoardItem]))
+    .then(() => console.log('Successfully wrote to write to local clipboard'))
+    .catch((err) => console.warn('Failed to write to local clipboard', err));
+}
 
-    readAndUpload: async function () {
-      navigator.clipboard
-        .read()
-        .then((clipboardItems) =>
-          Promise.all(
-            clipboardItems.flatMap((clipboardItem) =>
-              clipboardItem.types.map((type) =>
-                clipboardItem
-                  .getType(type)
-                  .then((blob) => new File([blob], `LABEL_${encodeURIComponent(type)}`)),
-              ),
-            ),
+function fetchClipboardBlobs(): Promise<Record<string, Blob>> {
+  const promises = clipboard.value.map(({ info: { label } }) =>
+    fetchClipboardBlob(label).then((blob) => ({ label, blob })),
+  );
+
+  return Promise.all(promises).then((result) =>
+    result.reduce(
+      (acc, { blob, label }) => {
+        acc[label] = blob;
+        return acc;
+      },
+      {} as Record<string, Blob>,
+    ),
+  );
+}
+
+function fetchClipboardBlob(label: string): Promise<Blob> {
+  return fetch(`?clip=${label}`).then((response) => response.blob());
+}
+
+function fetchClipboardInfo(): Promise<ClipboardItemInfo[]> {
+  return fetch('?info').then((response) => response.json());
+}
+
+function readAndUpload() {
+  navigator.clipboard
+    .read()
+    .then((clipboardItems) =>
+      Promise.all(
+        clipboardItems.flatMap((clipboardItem) =>
+          clipboardItem.types.map((type) =>
+            clipboardItem
+              .getType(type)
+              .then((blob) => new File([blob], `LABEL_${encodeURIComponent(type)}`)),
           ),
-        )
-        .then((files) => this.uploadFiles(files));
+        ),
+      ),
+    )
+    .then((files) => uploadFiles(files));
+}
+
+function uploadFilesFromSelection(evt: Event) {
+  if (!(evt.target instanceof HTMLInputElement)) {
+    return;
+  }
+
+  uploadFiles(evt.target.files ?? []);
+}
+
+const upload = ref({ progress: 0, done: false });
+function uploadFiles(files: FileList | File[]) {
+  const body = new FormData();
+  for (const item of files) {
+    body.append(item.name, item);
+  }
+
+  progressTrackingUpload(
+    '?',
+    {
+      method: 'POST',
+      body,
     },
-    uploadFilesFromSelection: function (evt: Event) {
-      if (!(evt.target instanceof HTMLInputElement)) {
-        return;
+    (progress) => (upload.value.progress = progress.progressPercent),
+  ).then(() => {
+    fetchAndUpdateClipboardInfo();
+    upload.value.done = true;
+    setTimeout(() => {
+      upload.value.progress = 0;
+      setTimeout(() => {
+        upload.value.done = false;
+      }, 1000);
+    }, 1000);
+  });
+}
+
+function fetchAndUpdateClipboardInfo() {
+  fetchClipboardInfo().then((clipboardItemInfos) => {
+    if (clipboard.value[0]?.info.time !== clipboardItemInfos[0]?.time) {
+      clipboard.value = clipboardItemInfos.map((info) => ({ info, expanded: false }));
+    }
+  });
+}
+
+onMounted(() => {
+  document.addEventListener('keydown', (event) => {
+    if (event.ctrlKey || event.metaKey) {
+      if (event.key === 'c' && window.getSelection()?.isCollapsed) {
+        fetchAndWrite();
+      } else if (event.key === 'v') {
+        readAndUpload();
       }
+    }
+  });
+});
 
-      this.uploadFiles(evt.target.files ?? []);
-    },
-    uploadFiles: function (files: FileList | File[]) {
-      const body = new FormData();
-      for (const item of files) {
-        body.append(item.name, item);
-      }
+onMounted(() => {
+  window.addEventListener('dragover', (e) => {
+    e.dataTransfer!.dropEffect = 'copy';
+    e.preventDefault();
+  });
+  window.addEventListener('drop', (e) => {
+    if (e.dataTransfer?.items == null) {
+      return;
+    }
 
-      progressTrackingUpload(
-        '?',
-        {
-          method: 'POST',
-          body,
-        },
-        (progress) => (this.upload.progress = progress.progressPercent),
-      ).then(() => {
-        this.fetchAndUpdateClipboardInfo();
-        this.upload.done = true;
-        setTimeout(() => {
-          this.upload.progress = 0;
-          setTimeout(() => {
-            this.upload.done = false;
-          }, 1000);
-        }, 1000);
-      });
-    },
-
-    fetchAndUpdateClipboardInfo: function () {
-      this.fetchClipboardInfo().then((clipboardItemInfos) => {
-        if (this.clipboard[0]?.info.time !== clipboardItemInfos[0]?.time) {
-          this.clipboard = clipboardItemInfos.map((info) => ({ info, expanded: false }));
-        }
-      });
-    },
-  },
-  mounted() {
-    // Keyboard shortcuts
-    document.addEventListener('keydown', (event) => {
-      if (event.ctrlKey || event.metaKey) {
-        if (event.key === 'c' && window.getSelection()?.isCollapsed) {
-          this.fetchAndWrite();
-        } else if (event.key === 'v') {
-          this.readAndUpload();
-        }
-      }
-    });
-
-    // Dragged files
-    window.addEventListener('dragover', (e) => {
-      e.dataTransfer!.dropEffect = 'copy';
+    if ([...e.dataTransfer.items].some((item) => item.kind === 'file')) {
       e.preventDefault();
-    });
-    window.addEventListener('drop', (e) => {
-      if (e.dataTransfer?.items == null) {
-        return;
-      }
+    }
+  });
+});
 
-      if ([...e.dataTransfer.items].some((item) => item.kind === 'file')) {
-        e.preventDefault();
-      }
-    });
+onMounted(() => {
+  const infoPollInterval = setInterval(() => fetchAndUpdateClipboardInfo(), 1000);
+  fetchAndUpdateClipboardInfo();
 
-    // Polling for updates
-    infoPollInterval = setInterval(() => this.fetchAndUpdateClipboardInfo(), 1000);
-    this.fetchAndUpdateClipboardInfo();
-  },
-  unmounted() {
+  onUnmounted(() => {
     clearInterval(infoPollInterval);
-  },
-};
+  });
+});
 </script>
 
 <template>
@@ -200,7 +201,7 @@ export default {
       <input
         type="file"
         multiple
-        ref="files"
+        ref="file-input"
         @change="uploadFilesFromSelection"
         style="display: none"
       />
