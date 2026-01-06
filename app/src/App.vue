@@ -37,11 +37,9 @@ function humanFileSize(bytes: number, fractionDigits = 1) {
   return `${bytes.toFixed(fractionDigits)} ${units[u]}`;
 }
 
+const fileInputRef = useTemplateRef('file-input');
 function uploadButtonClicked() {
-  const fileInput = useTemplateRef('file-input').value as HTMLInputElement;
-  if (fileInput != null) {
-    fileInput.click();
-  }
+  fileInputRef.value?.click();
 }
 
 const clipboard = ref([] as ClipboardItem[]);
