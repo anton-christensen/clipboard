@@ -190,7 +190,7 @@ onMounted(() => {
       />
     </li>
     <li>
-      <a href="?install">Instructions</a>: for getting OS integrations like
+      <a :href="`${BASE_URL}?install`">Instructions</a>: for getting OS integrations like
       <code>Ctrl+Win+C/V</code> to copy and paste to/from clipboard from anywhere directly
     </li>
   </ul>
