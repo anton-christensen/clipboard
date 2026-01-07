@@ -13,8 +13,16 @@ defineProps<{
   </div>
   <div v-else>
     <p>Listed below are the current contents of the online clipboard</p>
-    <ul>
+    <div class="items">
       <ClipboardItem v-for="(item, index) in clipboard" :key="item.info.hash" :item :index />
-    </ul>
+    </div>
   </div>
 </template>
+
+<style scoped>
+.items {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+</style>
