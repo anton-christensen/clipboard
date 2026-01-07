@@ -151,20 +151,23 @@ onMounted(() => {
 
 <template>
   <ProgressBar v-model="uploadProgress" />
-  <ul>
-    <li>
+
+  <h1>The Online Clipboard</h1>
+
+  <div>
+    <div>
       <button @click="fetchAndWrite" :disabled="clipboard.length === 0">Ctrl+C</button>
-      : To copy data to your local clipboard
-    </li>
-    <li>
-      <button @click="readAndUpload">Ctrl+V</button>
-      : To upload your local clipboard to the site
+      Write data from the online clipboard to your local clipboard
+    </div>
+
+    <div>
       <button @click="readAndUpload" :disabled="uploadProgress !== 0">Ctrl+V</button>
-    </li>
-    <li>
-      <button @click="uploadButtonClicked">Upload</button>
-      : files by dragging them onto the page
+      Upload your local clipboard to the online one
+    </div>
+
+    <div>
       <button @click="uploadButtonClicked" :disabled="uploadProgress !== 0">Upload</button>
+      Upload files to the clipboard by dragging them onto the page
       <input
         type="file"
         multiple
@@ -172,12 +175,13 @@ onMounted(() => {
         @change="uploadFilesFromSelection"
         :disabled="uploadProgress !== 0"
       />
-    </li>
-    <li>
-      <a :href="`${BASE_URL}?install`">Instructions</a>: for getting OS integrations like
-      <code>Ctrl+Win+C/V</code> to copy and paste to/from clipboard from anywhere directly
-    </li>
-  </ul>
+    </div>
+
+    <div>
+      <a :href="`${BASE_URL}?install`">Instructions</a> for getting OS integrations such as
+      <code>Ctrl+Win+C/V</code> to copy and paste to and from your native clipboard anywhere
+    </div>
+  </div>
 
   <ClipboardItems :clipboard />
 </template>
