@@ -14,8 +14,23 @@ defineProps<{
 
 const toggleExpansion = inject('toggleExpansion') as (index: number) => void;
 
-function isPreviewable() {
-  return true;
+function isPreviewable(mime: string) {
+  switch (mime) {
+    case 'image/png':
+    case 'image/jpeg':
+    case 'image/gif':
+    case 'image/webp':
+    case 'video/mp4':
+    case 'video/webm':
+    case 'audio/mpeg':
+    case 'audio/ogg':
+    case 'text/plain':
+    case 'text/html':
+    case 'application/pdf':
+      return true;
+    default:
+      return false;
+  }
 }
 
 function humanFileSize(bytes: number, fractionDigits = 1) {
@@ -38,27 +53,37 @@ function humanFileSize(bytes: number, fractionDigits = 1) {
 </script>
 
 <template>
-  <li>
-    <a :href="`${BASE_URL}?clip=${item.info.label}`" target="_blank"
-      ><b>{{ item.info.label }}: </b><span>{{ humanFileSize(item.info.size) }}</span></a
-    >
-    <button v-if="isPreviewable" @click="toggleExpansion(index)">Preview</button>
+  <div>
+    <div class="item-header">
+      <button @click="toggleExpansion(index)">
+        {{ isPreviewable(item.info.mime) ? 'Preview' : 'Download' }}
+      </button>
+      <a :href="`${BASE_URL}?clip=${item.info.label}`" target="_blank">
+        <b>{{ item.info.label }}</b>
+        <span>({{ humanFileSize(item.info.size) }})</span>
+      </a>
+    </div>
+
     <iframe
       v-if="item.expanded"
       :src="`${BASE_URL}?cachekill=${item.info.hash}&clip=${item.info.label}`"
     />
-  </li>
+  </div>
 </template>
 
 <style scoped>
+.item-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
 iframe {
   width: 100%;
   height: 40vh;
-  box-sizing: border-box;
+  margin: 0.5rem 0;
   border: 0;
-  border-top: 1px solid;
-  border-bottom: 1px solid;
-  margin: 1rem 0;
+
   resize: vertical;
   overflow-y: auto;
 }
