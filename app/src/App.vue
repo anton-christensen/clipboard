@@ -1,12 +1,6 @@
 <script setup lang="ts">
 import { onMounted, onUnmounted, provide, ref, useTemplateRef } from 'vue';
-import {
-  BASE_URL,
-  fetchClipboardBlob,
-  fetchClipboardInfo,
-  fileFromBlob,
-  uploadToClipboard,
-} from '@/api.ts';
+import { fetchClipboardBlob, fetchClipboardInfo, fileFromBlob, uploadToClipboard } from '@/api.ts';
 import ClipboardItems from '@/components/Clipboard/ClipboardItems.vue';
 import type { ClipboardObject } from '@/components/Clipboard/ClipboardItem.vue';
 import ProgressBar from '@/components/ProgressBar.vue';
@@ -154,10 +148,10 @@ onMounted(() => {
   <ProgressBar v-model="uploadProgress" />
 
   <div class="flex flex-col gap-5">
-    <h1 class="select-none text-6xl font-heading text-center text-sky-600 group">
+    <h1 class="font-heading group text-center text-6xl text-sky-600 select-none">
       The
       <span
-        class="group-hover:animate-spin-slow before:block before:absolute before:-inset-1 before:-skew-y-3 before:bg-pink-500 relative inline-block"
+        class="group-hover:animate-spin-slow relative inline-block before:absolute before:-inset-1 before:block before:-skew-y-3 before:bg-pink-500"
       >
         <span class="relative text-amber-300">online</span>
       </span>
