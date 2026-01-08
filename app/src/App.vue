@@ -10,6 +10,7 @@ import {
 import ClipboardItems from '@/components/Clipboard/ClipboardItems.vue';
 import type { ClipboardObject } from '@/components/Clipboard/ClipboardItem.vue';
 import ProgressBar from '@/components/ProgressBar.vue';
+import StyledButton from '@/components/StyledButton.vue';
 
 const fileInputRef = useTemplateRef('file-input');
 function uploadButtonClicked() {
@@ -152,54 +153,45 @@ onMounted(() => {
 <template>
   <ProgressBar v-model="uploadProgress" />
 
-  <h1>The Online Clipboard</h1>
+  <div class="flex flex-col gap-5">
+    <h1 class="text-6xl font-heading text-center text-sky-600">
+      The
+      <span
+        class="before:block before:absolute before:-inset-1 before:-skew-y-3 before:bg-pink-500 relative inline-block"
+      >
+        <span class="relative text-amber-300">online</span>
+      </span>
+      Clipboard
+    </h1>
 
-  <div>
-    <div>
-      <button @click="fetchAndWrite" :disabled="clipboard.length === 0">Ctrl+C</button>
-      Write data from the online clipboard to your local clipboard
-    </div>
+    <div class="flex flex-col gap-4">
+      <div class="flex gap-6">
+        <StyledButton
+          text="Copy"
+          icon="content_copy"
+          @click="fetchAndWrite"
+          :disabled="clipboard.length === 0"
+        />
 
-    <div>
-      <button @click="readAndUpload" :disabled="uploadProgress !== 0">Ctrl+V</button>
-      Upload your local clipboard to the online one
-    </div>
+        <StyledButton text="Paste" @click="readAndUpload" :disabled="uploadProgress !== 0" />
 
-    <div>
-      <button @click="uploadButtonClicked" :disabled="uploadProgress !== 0">Upload</button>
-      Upload files to the clipboard by dragging them onto the page
-      <input
-        type="file"
-        multiple
-        ref="file-input"
-        @change="uploadFilesFromSelection"
-        :disabled="uploadProgress !== 0"
-      />
-    </div>
+        <StyledButton
+          text="Upload Files"
+          @click="uploadButtonClicked"
+          :disabled="uploadProgress !== 0"
+        >
+        </StyledButton>
+        <input
+          type="file"
+          multiple
+          class="hidden"
+          ref="file-input"
+          @change="uploadFilesFromSelection"
+          :disabled="uploadProgress !== 0"
+        />
+      </div>
 
-    <div>
-      <a :href="`${BASE_URL}?install`">Instructions</a> for getting OS integrations such as
-      <code>Ctrl+Win+C/V</code> to copy and paste to and from your native clipboard anywhere
+      <ClipboardItems :clipboard />
     </div>
   </div>
-
-  <ClipboardItems :clipboard />
 </template>
-
-<style scoped>
-input[type='file'] {
-  display: none;
-}
-
-code {
-  padding: 0.2em 0.4em;
-  border-radius: 0.5em;
-
-  font-family:
-    Consolas,
-    Liberation Mono,
-    monospace;
-  font-size: 80%;
-  background-color: hsl(0, 0%, 90%);
-}
-</style>

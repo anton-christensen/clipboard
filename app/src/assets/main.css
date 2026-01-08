@@ -1,0 +1,81 @@
+@import url('https://fonts.googleapis.com/css2?family=Aladin&family=Berkshire+Swash&family=Bungee+Spice&family=Honk:MORF@15&family=ZCOOL+KuaiLe&display=swap');
+
+@import "tailwindcss";
+
+@property --rise-x {
+  syntax: '<percentage>';
+  inherits: false;
+  initial-value: 0%;
+}
+@property --rise-y {
+  syntax: '<percentage>';
+  inherits: false;
+  initial-value: 200%;
+}
+
+@theme {
+  --font-heading: "ZCOOL KuaiLe", sans-serif;
+
+  --animate-sunrise:
+    rise-x 60s linear forwards infinite alternate,
+    rise-y 30s cubic-bezier(0,.5,.5,1) forwards infinite alternate;
+  @keyframes rise-x {
+    0% {
+      --rise-x: 0%;
+    }
+    50% {
+      --rise-x: 50%;
+    }
+    100% {
+      --rise-x: 100%;
+    }
+  }
+  @keyframes rise-y {
+    0% {
+      --rise-y: 200%;
+    }
+    100% {
+      --rise-y: 100%;
+    }
+  }
+}
+
+.material-symbols-outlined {
+  font-variation-settings: 'FILL' 0,
+  'GRAD' 0,
+  'opsz' 24
+}
+
+.bungee-spice-regular {
+  font-family: "Bungee Spice", sans-serif;
+  font-weight: 400;
+  font-style: normal;
+}
+
+.honk-variable {
+  font-family: "Honk", system-ui;
+  font-optical-sizing: auto;
+  font-weight: 400;
+  font-style: normal;
+  font-variation-settings: "MORF" 15,
+  "SHLN" 50;
+}
+
+.berkshire-swash-regular {
+  font-family: "Berkshire Swash", serif;
+  font-weight: 400;
+  font-style: normal;
+}
+
+.zcool-kuaile-regular {
+  font-family: "ZCOOL KuaiLe", sans-serif;
+  font-weight: 400;
+  font-style: normal;
+}
+
+.aladin-regular {
+  font-family: "Aladin", system-ui;
+  font-weight: 400;
+  font-style: normal;
+}
+

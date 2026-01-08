@@ -1,32 +1,43 @@
 <script setup lang="ts">
 import { BASE_URL, type ClipboardItemInfo } from '@/api.ts';
-import { inject } from 'vue';
+import { computed, inject } from 'vue';
+import StyledButton from '@/components/StyledButton.vue';
 
 export interface ClipboardObject {
   info: ClipboardItemInfo;
   expanded: boolean;
 }
 
-defineProps<{
+const props = defineProps<{
   item: ClipboardObject;
   index: number;
 }>();
+
+const title = computed(() => {
+  const info = props.item.info;
+  if (info.label === info.mime) {
+    return info.label;
+  }
+
+  return `${info.label} (${info.mime})`;
+});
 
 const toggleExpansion = inject('toggleExpansion') as (index: number) => void;
 
 function isPreviewable(mime: string) {
   switch (mime) {
-    case 'image/png':
-    case 'image/jpeg':
-    case 'image/gif':
-    case 'image/webp':
-    case 'video/mp4':
-    case 'video/webm':
+    case 'application/pdf':
     case 'audio/mpeg':
     case 'audio/ogg':
-    case 'text/plain':
+    case 'image/gif':
+    case 'image/jpeg':
+    case 'image/png':
+    case 'image/webp':
     case 'text/html':
-    case 'application/pdf':
+    case 'text/plain':
+    case 'text/uri-list':
+    case 'video/mp4':
+    case 'video/webm':
       return true;
     default:
       return false;
@@ -55,11 +66,12 @@ function humanFileSize(bytes: number, fractionDigits = 1) {
 <template>
   <div>
     <div class="item-header">
-      <button @click="toggleExpansion(index)">
-        {{ isPreviewable(item.info.mime) ? 'Preview' : 'Download' }}
-      </button>
+      <StyledButton
+        @click="toggleExpansion(index)"
+        :text="isPreviewable(item.info.mime) ? 'Preview' : 'Download'"
+      />
       <a :href="`${BASE_URL}?clip=${item.info.label}`" target="_blank">
-        <b>{{ item.info.label }}</b>
+        <b>{{ title }}</b>
         <span>({{ humanFileSize(item.info.size) }})</span>
       </a>
     </div>
