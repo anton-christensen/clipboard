@@ -75,3 +75,11 @@ const progressTrackingUpload = (
       reject(error);
     }
   });
+
+export const downloadClipboardItem = (item: ClipboardItemInfo) => {
+  const anchorElement = document.createElement('a');
+  anchorElement.href = `${BASE_URL}?download=true&cachekill=${item.hash}&clip=${item.label}`;
+  anchorElement.download = item.label;
+
+  anchorElement.click();
+};

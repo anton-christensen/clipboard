@@ -1,17 +1,23 @@
 <script setup lang="ts">
-import { onMounted, onUnmounted, provide, ref, useTemplateRef } from 'vue';
-import { fetchClipboardBlob, fetchClipboardInfo, fileFromBlob, uploadToClipboard } from '@/api.ts';
-import ClipboardItems from '@/components/Clipboard/ClipboardItems.vue';
-import type { ClipboardObject } from '@/components/Clipboard/ClipboardItem.vue';
+import { onMounted, onUnmounted, ref, useTemplateRef } from 'vue';
+import {
+  type ClipboardItemInfo,
+  fetchClipboardBlob,
+  fetchClipboardInfo,
+  fileFromBlob,
+  uploadToClipboard,
+} from '@/api.ts';
+import ClipboardItems from '@/components/ClipboardItems.vue';
 import ProgressBar from '@/components/ProgressBar.vue';
 import StyledButton from '@/components/StyledButton.vue';
+import HeaderTitle from '@/components/HeaderTitle.vue';
 
 const fileInputRef = useTemplateRef('file-input');
 function uploadButtonClicked() {
   fileInputRef.value?.click();
 }
 
-const clipboard = ref([] as ClipboardObject[]);
+const clipboard = ref([] as ClipboardItemInfo[]);
 function fetchAndWrite() {
   if (clipboard.value.length === 0) {
     return;
@@ -26,9 +32,7 @@ function fetchAndWrite() {
 
 function fetchClipboardBlobs(): Promise<Record<string, Blob>> {
   return Promise.all(
-    clipboard.value.map(({ info: { label } }) =>
-      fetchClipboardBlob(label).then((blob) => ({ label, blob })),
-    ),
+    clipboard.value.map(({ label }) => fetchClipboardBlob(label).then((blob) => ({ label, blob }))),
   ).then((labelledBlobs) =>
     labelledBlobs.reduce(
       (acc, { blob, label }) => {
@@ -84,19 +88,12 @@ function fetchAndUpdateClipboardInfo() {
   fetchClipboardInfo().then((clipboardItemInfos) => {
     if (
       clipboard.value.length !== clipboardItemInfos.length ||
-      clipboard.value.some((value, index) => value.info.hash !== clipboardItemInfos[index]?.hash)
+      clipboard.value.some((value, index) => value.hash !== clipboardItemInfos[index]?.hash)
     ) {
-      clipboard.value = clipboardItemInfos.map((info) => ({ info, expanded: false }));
+      clipboard.value = clipboardItemInfos;
     }
   });
 }
-
-function toggleExpansion(index: number) {
-  if (clipboard.value[index] != null) {
-    clipboard.value[index].expanded = !clipboard.value[index].expanded;
-  }
-}
-provide('toggleExpansion', toggleExpansion);
 
 onMounted(() => {
   document.addEventListener('keydown', (event) => {
@@ -147,45 +144,45 @@ onMounted(() => {
 <template>
   <ProgressBar v-model="uploadProgress" />
 
-  <div class="flex flex-col gap-5">
-    <h1 class="font-heading group text-center text-6xl text-sky-600 select-none">
-      The
-      <span
-        class="group-hover:animate-spin-slow relative inline-block before:absolute before:-inset-1 before:block before:-skew-y-3 before:bg-pink-500"
+  <div
+    class="animate-sunrise fixed z-[-1] h-full w-full bg-radial-[100vh_circle_at_var(--rise-x)_var(--rise-y)] from-amber-300 from-10% via-pink-300 via-35% to-sky-300 dark:bg-radial-[100vh_circle_at_var(--rise-x)_calc(var(--rise-y)-30%)] dark:from-blue-100 dark:from-5% dark:via-gray-800 dark:via-10% dark:to-gray-950 dark:to-20%"
+  ></div>
+
+  <div class="flex flex-col gap-12 p-8">
+    <HeaderTitle />
+
+    <div class="flex gap-6 self-center">
+      <StyledButton
+        text="Copy"
+        icon="content_copy"
+        @click="fetchAndWrite"
+        :disabled="clipboard.length === 0"
+      />
+
+      <StyledButton
+        text="Paste"
+        icon="content_paste"
+        @click="readAndUpload"
+        :disabled="uploadProgress !== 0"
+      />
+
+      <StyledButton
+        text="Upload files"
+        icon="upload_file"
+        @click="uploadButtonClicked"
+        :disabled="uploadProgress !== 0"
       >
-        <span class="relative text-amber-300">online</span>
-      </span>
-      Clipboard
-    </h1>
-
-    <div class="flex flex-col gap-4">
-      <div class="flex gap-6">
-        <StyledButton
-          text="Copy"
-          icon="content_copy"
-          @click="fetchAndWrite"
-          :disabled="clipboard.length === 0"
-        />
-
-        <StyledButton text="Paste" @click="readAndUpload" :disabled="uploadProgress !== 0" />
-
-        <StyledButton
-          text="Upload Files"
-          @click="uploadButtonClicked"
-          :disabled="uploadProgress !== 0"
-        >
-        </StyledButton>
-        <input
-          type="file"
-          multiple
-          class="hidden"
-          ref="file-input"
-          @change="uploadFilesFromSelection"
-          :disabled="uploadProgress !== 0"
-        />
-      </div>
-
-      <ClipboardItems :clipboard />
+      </StyledButton>
+      <input
+        type="file"
+        multiple
+        class="hidden"
+        ref="file-input"
+        @change="uploadFilesFromSelection"
+        :disabled="uploadProgress !== 0"
+      />
     </div>
+
+    <ClipboardItems :clipboard />
   </div>
 </template>

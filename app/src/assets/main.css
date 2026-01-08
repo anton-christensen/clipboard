@@ -1,12 +1,22 @@
-@import url('https://fonts.googleapis.com/css2?family=Aladin&family=Berkshire+Swash&family=Bungee+Spice&family=Honk:MORF@15&family=ZCOOL+KuaiLe&display=swap');
-
+@import url('https://fonts.googleapis.com/css2?family=Aladin&family=Berkshire+Swash&family=Bungee+Spice&family=ZCOOL+KuaiLe&display=swap');
 @import "tailwindcss";
+
+@utility clipboard-item-active {
+  @apply bg-[rgba(0,0,0,0.02)] text-sky-800 dark:text-amber-500 shadow-md backdrop-blur-lg;
+}
+
+@utility icon-thin {
+  font-variation-settings: 'wght' 100,
+  'GRAD' -25,
+  'opsz' 24;
+}
 
 @property --rise-x {
   syntax: '<percentage>';
   inherits: false;
   initial-value: 0%;
 }
+
 @property --rise-y {
   syntax: '<percentage>';
   inherits: false;
@@ -15,12 +25,30 @@
 
 @theme {
   --font-heading: "ZCOOL KuaiLe", sans-serif;
+  --font-bungee-spice: "Bungee Spice", sans-serif;
+  --font-berkshire-swash: "Berkshire Swash", serif;
+  --font-aladin: "Aladin", system-ui;
 
   --animate-spin-slow: spin 2s linear infinite;
-  --animate-sunrise:
-    rise-x 60s linear forwards infinite alternate,
-    rise-y 30s cubic-bezier(0,.5,.5,1) forwards infinite alternate;
 
+  --animate-wiggle: wiggle 200ms linear;
+  @keyframes wiggle {
+    0% {
+      transform: rotate(0deg);
+    }
+    25% {
+      transform: rotate(-5deg);
+    }
+    75% {
+      transform: rotate(5deg);
+    }
+    100% {
+      transform: rotate(0deg);
+    }
+  }
+
+  --animate-sunrise: rise-x 60s linear forwards infinite,
+  rise-y 30s cubic-bezier(0, .5, .5, 1) forwards infinite alternate;
   @keyframes rise-x {
     0% {
       --rise-x: 0%;
@@ -42,42 +70,9 @@
   }
 }
 
-.material-symbols-outlined {
-  font-variation-settings: 'FILL' 0,
-  'GRAD' 0,
-  'opsz' 24
-}
 
-.bungee-spice-regular {
-  font-family: "Bungee Spice", sans-serif;
-  font-weight: 400;
-  font-style: normal;
-}
-
-.honk-variable {
-  font-family: "Honk", system-ui;
-  font-optical-sizing: auto;
-  font-weight: 400;
-  font-style: normal;
-  font-variation-settings: "MORF" 15,
-  "SHLN" 50;
-}
-
-.berkshire-swash-regular {
-  font-family: "Berkshire Swash", serif;
-  font-weight: 400;
-  font-style: normal;
-}
-
-.zcool-kuaile-regular {
-  font-family: "ZCOOL KuaiLe", sans-serif;
-  font-weight: 400;
-  font-style: normal;
-}
-
-.aladin-regular {
-  font-family: "Aladin", system-ui;
-  font-weight: 400;
-  font-style: normal;
-}
-
+/*.material-symbols-outlined {*/
+/*  font-variation-settings: 'FILL' 0,*/
+/*  'GRAD' 0,*/
+/*  'opsz' 24;*/
+/*}*/
