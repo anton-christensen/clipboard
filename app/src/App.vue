@@ -154,10 +154,10 @@ onMounted(() => {
   <ProgressBar v-model="uploadProgress" />
 
   <div class="flex flex-col gap-5">
-    <h1 class="text-6xl font-heading text-center text-sky-600">
+    <h1 class="select-none text-6xl font-heading text-center text-sky-600 group">
       The
       <span
-        class="before:block before:absolute before:-inset-1 before:-skew-y-3 before:bg-pink-500 relative inline-block"
+        class="group-hover:animate-spin-slow before:block before:absolute before:-inset-1 before:-skew-y-3 before:bg-pink-500 relative inline-block"
       >
         <span class="relative text-amber-300">online</span>
       </span>

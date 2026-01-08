@@ -16,9 +16,11 @@
 @theme {
   --font-heading: "ZCOOL KuaiLe", sans-serif;
 
+  --animate-spin-slow: spin 2s linear infinite;
   --animate-sunrise:
     rise-x 60s linear forwards infinite alternate,
     rise-y 30s cubic-bezier(0,.5,.5,1) forwards infinite alternate;
+
   @keyframes rise-x {
     0% {
       --rise-x: 0%;
