@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { onMounted } from 'vue';
+
 const adjectives = [
   'binary',
   'cloud',
@@ -20,7 +22,9 @@ const adjectives = [
   'world wide',
   'pretty fun',
 ];
+
 const randomAdjective = adjectives[Math.floor(Math.random() * adjectives.length)];
+document.title = `The ${randomAdjective} Clipboard`;
 </script>
 
 <template>
