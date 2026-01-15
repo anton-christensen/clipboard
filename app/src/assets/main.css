@@ -1,15 +1,7 @@
 @import url('https://fonts.googleapis.com/css2?family=Aladin&family=Berkshire+Swash&family=Bungee+Spice&family=ZCOOL+KuaiLe&display=swap');
 @import "tailwindcss";
 
-@utility clipboard-item-active {
-  @apply bg-[rgba(0,0,0,0.02)] text-sky-800 dark:text-amber-500 shadow-md backdrop-blur-lg;
-}
-
-@utility icon-thin {
-  font-variation-settings: 'wght' 100,
-  'GRAD' -25,
-  'opsz' 24;
-}
+@custom-variant dark (&:where(.dark, .dark *));
 
 @property --rise-x {
   syntax: '<percentage>';
@@ -70,9 +62,12 @@
   }
 }
 
+@utility clipboard-item-active {
+  @apply bg-[rgba(0,0,0,0.02)] text-sky-800 dark:text-amber-500 shadow-md backdrop-blur-lg;
+}
 
-/*.material-symbols-outlined {*/
-/*  font-variation-settings: 'FILL' 0,*/
-/*  'GRAD' 0,*/
-/*  'opsz' 24;*/
-/*}*/
+@utility icon-thin {
+  font-variation-settings: 'wght' 100,
+  'GRAD' -25,
+  'opsz' 24;
+}
