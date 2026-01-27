@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Aladin&family=Berkshire+Swash&family=Bungee+Spice&family=ZCOOL+KuaiLe&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=ZCOOL+KuaiLe&display=swap');
 @import "tailwindcss";
 
 @custom-variant dark (&:where(.dark, .dark *));
@@ -16,11 +16,10 @@
 }
 
 @theme {
-  --font-heading: "ZCOOL KuaiLe", sans-serif;
-  --font-bungee-spice: "Bungee Spice", sans-serif;
-  --font-berkshire-swash: "Berkshire Swash", serif;
-  --font-aladin: "Aladin", system-ui;
+  /* Fonts */
+  --font-heading: 'ZCOOL KuaiLe', sans-serif;
 
+  /* Animations */
   --animate-spin-slow: spin 2s linear infinite;
 
   --animate-wiggle: wiggle 200ms linear;

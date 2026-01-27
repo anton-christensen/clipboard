@@ -33,7 +33,7 @@ function toggleSelectedItem(index: number) {
 
 <template>
   <div v-if="clipboard.length === 0">
-    <p>This clipboard is currently empty</p>
+    <p class="dark:text-gray-400">This clipboard is currently empty</p>
   </div>
 
   <div v-else class="flex flex-wrap gap-4">
