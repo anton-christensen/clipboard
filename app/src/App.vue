@@ -11,6 +11,7 @@ import ClipboardItems from '@/components/ClipboardItems.vue';
 import ProgressBar from '@/components/ProgressBar.vue';
 import StyledButton from '@/components/StyledButton.vue';
 import HeaderTitle from '@/components/HeaderTitle.vue';
+import ThemeSelector from '@/components/ThemeSelector.vue';
 
 const fileInputRef = useTemplateRef('file-input');
 function uploadButtonClicked() {
@@ -143,6 +144,8 @@ onMounted(() => {
 
 <template>
   <ProgressBar v-model="uploadProgress" />
+
+  <ThemeSelector />
 
   <div
     class="animate-sunrise fixed z-[-1] h-full w-full bg-radial-[100vh_circle_at_var(--rise-x)_var(--rise-y)] from-amber-300 from-10% via-pink-300 via-35% to-sky-300 dark:bg-radial-[100vh_circle_at_var(--rise-x)_calc(var(--rise-y)-30%)] dark:from-blue-100 dark:from-5% dark:via-gray-800 dark:via-10% dark:to-gray-950 dark:to-20%"
